@@ -1,0 +1,110 @@
+ABS Coding Style
+=================
+
+1. Introduction
+
+Following a consistent coding style makes the job of reading and interpreting
+software between developers easier, increasing the possibilities of
+collaboration between developers. A coding style also helps in the debugging
+because it clearly lays out the functionality of the program: the code is
+self-documented.
+
+These rules should be followed from the very beginning, and not introduced
+later. Anything that is left for later is prone to not being done.
+
+2. Whitespace
+
+ - Indents are four spaces. Tabs are never used, except in Makefiles where they
+   have been irreversibly coded into the syntax.
+ - Separate parameters in functions with one space:
+        function(param1, param2, param3);
+ - Put spaces between operators and operands:
+        if (a == 1)
+ - Put spaces between conditional statements and the first parentheses:
+        while (x > 0)
+ - Do not leave whitespace dangling off the ends of lines.
+ - Leave one empty line between logical agroupations of instructions.
+ - Leave one empty line between functions.
+
+3. Line width
+
+Lines are 80 characters; not longer. Code and especially patches is much more
+readable if limited to a sane line length. This length also makes easier to
+embed code in documents.
+
+4. Naming
+
+ - Variables and functions are lower_case_with_underscores; easy to type and
+   read.
+ - Structured and enum type names are in CamelCase; harder to type but standing
+   out.
+ - Scalar type names are lower_case_with_underscores_ending_with_a_t, like the
+   POSIX uint64_t and family.
+ - Constants are UPPER_CASE_WITH_UNDERSCORES; to stand out.
+ - Global symbols include the domain of which they are part:
+        syscore_init_function
+ - When wrapping standard library functions, use the prefix abs_ to alert
+   readers that they are seeing a wrapped version; otherwise avoid this prefix:
+        abs_malloc
+
+5. Block structure
+
+Every indented statement is braced; even if the block contains just one
+statement. The opening brace is on the line that contains the control flow
+statement that introduces the new block; the closing brace is on the same line
+as the else keyword, or on a line by itself if there is no else keyword:
+
+    if (a == 5) {
+        printf("a was 5.\n");
+    } else if (a == 6) {
+        printf("a was 6.\n");
+    } else {
+        printf("a was something else entirely.\n");
+    }
+
+An exception is the opening brace for a function. It comes on a line by itself:
+
+    void a_function(void)
+    {
+        do_something();
+    }
+
+7. Declarations
+
+Mixed declarations (interleaving statements and declarations within blocks)
+are not allowed; declarations should be at the beginning of blocks. In other
+words, the code should not generate warnings if using GCC's
+-Wdeclaration-after-statement option.
+
+8. Static
+
+All data global for one file, and all auxiliar functions to that file must have
+the static keyword. Do not make global what it is not necessary.
+
+9. Headers
+
+Header files must have a conditional compilation with a descriptive name given
+its domain and file name, and finish with a _H:
+    #ifndef APPMOD_H
+    #define APPMOD_H
+    ...
+    #endif
+
+Only include what is needed. Avoid including what it is not needed.
+
+10. Comments and in-code documentation
+
+Use in-code comments rationally. It is not necessary comment each and every line
+but it is important to comment on decisions made, obscure hacks or other
+difficult to understand parts.
+
+Always surround the comments with /* */. Do not use other methods such as //
+
+How to document?: TODO
+
+11. Conclusion
+
+Any code modification accepted into the master tree must be compliant with these
+sets of rules and also compile without any warning whe using the -Wall setting.
+It is important to also add descriptive messages to the git commits.
+
