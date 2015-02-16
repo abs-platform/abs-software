@@ -1,8 +1,8 @@
-ABS Coding Style
-=================
+ABS CODING STYLE
+================================================================================
 
 1. Introduction
-
+--------------------------------------------------------------------------------
 Following a consistent coding style makes the job of reading and interpreting
 software between developers easier, increasing the possibilities of
 collaboration between developers. A coding style also helps in the debugging
@@ -12,43 +12,44 @@ self-documented.
 These rules should be followed from the very beginning, and not introduced
 later. Anything that is left for later is prone to not being done.
 
-2. Whitespace
 
- - Indents are four spaces. Tabs are never used, except in Makefiles where they
-   have been irreversibly coded into the syntax.
+2. Line width
+--------------------------------------------------------------------------------
+Line width is 80 characters; not longer. Code, and especially patches, is much 
+more readable if limited to a sane line length. This length also makes it easier
+to embed code in DIN-A4 documents.
+
+
+3. Whitespace
+--------------------------------------------------------------------------------
+ - Indents are four spaces. Tabs are forbidden for identation purposes unless 
+   they are a language or syntax request (e.g. Makefiles).
  - Separate parameters in functions with one space:
         function(param1, param2, param3);
- - Put spaces between operators and operands:
-        if (a == 1)
+ - Opeands and operators must be separated with (at least) one space at each 
+   side of the operation:
+        b = a + 1;
+ - Extra spaces can be optionally added to improve readability when several 
+   operations can be aligned together. In this situation, the alignment should
+   be ideally done with the equal (=) symbol:
+        b    = a + 1;
+        c_2  = b * 4;
+        c_2 *= a;
+<<<< Options:
+------------- Marc:
  - Put spaces between conditional statements and the first parentheses:
         while (x > 0)
+------------- Carles:
+>>>>
  - Do not leave whitespace dangling off the ends of lines.
- - Leave one empty line between logical agroupations of instructions.
+ - Leave one empty line between logical groups of instructions.
  - Leave one empty line between functions.
 
-3. Line width
 
-Lines are 80 characters; not longer. Code and especially patches is much more
-readable if limited to a sane line length. This length also makes easier to
-embed code in documents.
-
-4. Naming
-
- - Variables and functions are lower_case_with_underscores; easy to type and
-   read.
- - Structured and enum type names are in CamelCase; harder to type but standing
-   out.
- - Scalar type names are lower_case_with_underscores_ending_with_a_t, like the
-   POSIX uint64_t and family.
- - Constants are UPPER_CASE_WITH_UNDERSCORES; to stand out.
- - Global symbols include the domain of which they are part:
-        syscore_init_function
- - When wrapping standard library functions, use the prefix abs_ to alert
-   readers that they are seeing a wrapped version; otherwise avoid this prefix:
-        abs_malloc
-
-5. Block structure
-
+4. Block structure
+--------------------------------------------------------------------------------
+<<<< Options:
+------------- Marc:
 Every indented statement is braced; even if the block contains just one
 statement. The opening brace is on the line that contains the control flow
 statement that introduces the new block; the closing brace is on the same line
@@ -68,43 +69,167 @@ An exception is the opening brace for a function. It comes on a line by itself:
     {
         do_something();
     }
+------------- Carles:
+ - Braced blocks of code must be properly indented.
+ - Flow control statements must not contain spaces between the name and 
+   conditions/arguments.
+        if(condition)   /* Correct. */
+        if (condition)  /* Wrong.   */
+ - Opening braces should be written in a first new line right after the flow 
+   control statement, and must be indented at the same height. Intermediate 
+   statements and their braces (such as "else") have to be placed in a *single* 
+   new line. Their braces must be separated by one space from the statement.
+   Example:
+        if(condition1)          /* No space after "if". */ 
+        {                       /* Single new line. */
+            do_something();
+        } else if(condition2) { /* Spaces only before/after closing/opening */
+            do_something();     /* braces.                                  */
+        } else {
+            do_something();
+        }
+ - Blocks containing a single statement can skip the braces if and only if they 
+   fit in a single line, e.g.: 
+        if(condition) op = 42;
+   The purpose of this rule is only to shrink the LOC number and should never 
+   worsen readability. Nesting is not allowed without braces:
+        for(int i = 0; i < N; i++)          /*          */
+            for(int j = 0; j < N; j++)      /* Wrong.   */
+                for(int k = 0; k < N; k++)  /*          */
+                    single_line();          /*          */
 
-7. Declarations
+        for(int i = 0; i < N; i++) if(condition) single_line(); /* Wrong.*/
+         
+        for(int i = 0; i < N; i++)
+        {
+            for(int i = 0; i < N; i++)
+            {
+                for(int i = 0; i < N; i++) single_line();   /* Correct. */
+            }
+        }
+>>>>
 
-Mixed declarations (interleaving statements and declarations within blocks)
-are not allowed; declarations should be at the beginning of blocks. In other
-words, the code should not generate warnings if using GCC's
--Wdeclaration-after-statement option.
 
-8. Static
+5. Naming
+--------------------------------------------------------------------------------
+ - Variables and functions are lower_case_with_underscores; easy to type and
+   read.
+ - Structured and enum type names are in CamelCase; harder to type but standing
+   out.
+ - Scalar type names are lower_case_with_underscores_ending_with_a_t, like the
+   POSIX uint64_t and similar families.
+ - Constants are UPPER_CASE_WITH_UNDERSCORES; to stand out.
+ - Global symbols include the domain of which they are part:
+        syscore_init_start
+        syscore_init_clean
+        syscore_power_flag
+ - When wrapping standard library functions, use the prefix abs_ to alert
+   readers that they are seeing a wrapped version; otherwise avoid this prefix:
+        abs_malloc
 
-All data global for one file, and all auxiliar functions to that file must have
-the static keyword. Do not make global what it is not necessary.
 
-9. Headers
+6. Declarations
+--------------------------------------------------------------------------------
+ - Mixed declarations (i.e. interleaving statements and declarations within 
+   blocks) are not allowed; declarations should be at the beginning of blocks. 
+   In other words, the code should not generate warnings if using GCC's
+   -Wdeclaration-after-statement option.
+ - Global variables initialization should be ideally performed within the body 
+   of the entry point (main) or an initialization handler. Avoid initializing a
+   global variable outside a function scope and at several source files. Try to 
+   use constants instead of hardcoded expressions when possible. 
 
-Header files must have a conditional compilation with a descriptive name given
-its domain and file name, and finish with a _H:
-    #ifndef APPMOD_H
-    #define APPMOD_H
-    ...
-    #endif
 
-Only include what is needed. Avoid including what it is not needed.
+7. Static and Extern
+--------------------------------------------------------------------------------
+ - All data global for one file, and all auxiliar functions to that file must
+   have the static keyword. Do not make global what it is not necessary.
+ - Global functions and variables must be declared in the header file using the 
+   "extern" modificatior. Their definition must be coded in the source files 
+   where they are used (except functions). Example:
+        /* ---- example.h: -----*/
+        extern int example_global;
+        extern char state_global;
+        extern void my_function();
+        
+        /* ---- example1.c: ----*/
+        int example_global;
+        static private_function()
+        {
+            /* Function that uses example_global varaible. */
+        }
+        
+        /* ---- example2.h: ----*/
+        char state_global;
+        void my_function()
+        {
+            /* Function that uses state_global variable. */
+        }
+        
+        
+8. Headers
+--------------------------------------------------------------------------------
+ - Each source file must have one single header file. Their names must match 
+   (except in the extension) and the header file should include all libraries
+   and external headers. The source file should contain only one #include 
+   directive.
+ - Header files must contain all constants, macros, type definitions, and global
+   function prototypes and variables. 
+ - Header files must have a conditional compilation with a descriptive name 
+   given its domain and file name, and finish with a _H:
+        #ifndef APPMOD_H
+        #define APPMOD_H
+        ...
+        #endif
+ - Only include what is needed. Avoid including what it is not needed (i.e. 
+   unused libraries, old headers...)
+ - C/C++ macros and complex constants (i.e. those which are calculated at 
+   compile-time) are there to save time, reduce lines of code, improve 
+   readability and mitigate typo-like errors. Use them with care, though, and 
+   don't forget to wrap complex expressions with parentheses. Example:
+        #define A   3
+        #define B   4
+        /* ---- case 1: */
+        #define C   A + B 
+        #define D   A * C /* The result will be 13. */
+        /* ---- case 2: */
+        #define C   (A + B) 
+        #define D   A * C /* The result will be 21. */
+        
 
-10. Comments and in-code documentation
+9. Comments and in-code documentation
+--------------------------------------------------------------------------------
+ - Use in-code comments rationally. There's no need to comment each and every 
+   line but it is very important to comment on decisions made, obscure hacks or 
+   other parts which might be difficult to understand.
+ - Always surround the comments with /* */. Do not use other methods such as //.
+ - Comments are English sentences: although short and clear, they must be 
+   grammatically correct. Do use punctuation (commas, full stops, parentheses 
+   and hyphens) and a proper language (e.g. avoid slang words, use technical 
+   expressions).
+<<<< Options:
+------------- Carles:
+ - Functions and files must be documented according to the Doxygen 
+   specifications. (TODO: complete/discuss with the rest of the team).
+>>>>
 
-Use in-code comments rationally. It is not necessary comment each and every line
-but it is important to comment on decisions made, obscure hacks or other
-difficult to understand parts.
+10. Git repository (are they "code style rules"?)
+--------------------------------------------------------------------------------
+ - TODO
 
-Always surround the comments with /* */. Do not use other methods such as //
+ 
+11. Robustness, debug easiness and flexibility
+--------------------------------------------------------------------------------
+ - TODO (choose some of the rules for robust code presented in a NASA/JPL paper) 
 
-How to document?: TODO
 
-11. Conclusion
+12. Final remarks
+--------------------------------------------------------------------------------
+ - Any code modifications accepted into the master tree must be compliant with 
+   these sets of rules and must compile without warnings using the -Wall option.
+ - New code must be provided together with a Makefile. Including README 
+   temporary files within certain folders is allowed (and recommended) to save 
+   time (and headaches) to the rest of the team.
+   
 
-Any code modification accepted into the master tree must be compliant with these
-sets of rules and also compile without any warning whe using the -Wall setting.
-It is important to also add descriptive messages to the git commits.
 
