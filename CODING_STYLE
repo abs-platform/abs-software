@@ -29,7 +29,7 @@ to embed code in DIN-A4 documents.
  - Opeands and operators must be separated with (at least) one space at each 
    side of the operation:
         b = a + 1;
- - Extra spaces can be optionally added to improve readability when several 
+ - Extra spaces can be optionally added to improve readability only when several 
    operations can be aligned together. In this situation, the alignment should
    be ideally done with the equal (=) symbol:
         b    = a + 1;
@@ -48,50 +48,17 @@ to embed code in DIN-A4 documents.
 
 4. Block structure
 --------------------------------------------------------------------------------
-<<<< Options:
-------------- Marc:
-Every indented statement is braced; even if the block contains just one
-statement. The opening brace is on the line that contains the control flow
-statement that introduces the new block; the closing brace is on the same line
-as the else keyword, or on a line by itself if there is no else keyword:
-
-    if (a == 5) {
-        printf("a was 5.\n");
-    } else if (a == 6) {
-        printf("a was 6.\n");
-    } else {
-        printf("a was something else entirely.\n");
-    }
-
-An exception is the opening brace for a function. It comes on a line by itself:
-
-    void a_function(void)
-    {
-        do_something();
-    }
-------------- Carles:
  - Braced blocks of code must be properly indented.
+ - Every indented statement is braced; even if the block contains just one
+   statement. 
  - Flow control statements must not contain spaces between the name and 
    conditions/arguments.
-        if(condition)   /* Correct. */
-        if (condition)  /* Wrong.   */
- - Opening braces should be written in a first new line right after the flow 
-   control statement, and must be indented at the same height. Intermediate 
-   statements and their braces (such as "else") have to be placed in a *single* 
-   new line. Their braces must be separated by one space from the statement.
-   Example:
-        if(condition1)          /* No space after "if". */ 
-        {                       /* Single new line. */
-            do_something();
-        } else if(condition2) { /* Spaces only before/after closing/opening */
-            do_something();     /* braces.                                  */
-        } else {
-            do_something();
-        }
+        if(condition)   /* Wrong.   */
+        if (condition)  /* Correct. */
  - Blocks containing a single statement can skip the braces if and only if they 
    fit in a single line, e.g.: 
         if(condition) op = 42;
-   The purpose of this rule is only to shrink the LOC number and should never 
+   The purpose of this rule is only to shrink the SLOC number and should *never* 
    worsen readability. Nesting is not allowed without braces:
         for(int i = 0; i < N; i++)          /*          */
             for(int j = 0; j < N; j++)      /* Wrong.   */
@@ -107,7 +74,50 @@ An exception is the opening brace for a function. It comes on a line by itself:
                 for(int i = 0; i < N; i++) single_line();   /* Correct. */
             }
         }
->>>>
+ - For flow control statements (if, while, for, switch):
+     - The opening brace must be in the same line that contains the flow control
+       statement and must be preceeded by a space; 
+     - the closing brace is in a new line; 
+     - the "} else ... {" statement is in a single new line;
+     - braces are separated one space from the rest of the line (if any).
+     - Example:
+        if(a == 5) {                /* One space before "{".                */
+            printf("a was 5.\n");   /* Identation is applied.               */
+        } else if(a == 6) {         /* Padding spaces next to braces.       */
+            printf("a was 6.\n");
+        } else {                    /* All in one new line.                 */
+            printf("a was something else entirely.\n");
+        }
+        for(i = 0; i < 3; i++) {    /* Braces are optional here because the */
+            printf("i is %d\n", i); /* inner part of the block is short     */
+        }                           /* enough to write it on a single line. */
+ - Functions:
+    - Both opening and closing braces must be written in a new line.
+    - No blank lines can be included right after or before the opening and 
+      closing braces, respectively.
+    - Example:
+        int a_function(void)
+        {                   /* New line.                                    */
+            do_something(); /* No space between prev. line and this one.    */
+                            /* Blank lines here ARE allowed.                */
+            return 0;       /* No space after the return line.              */
+        }                   /* New line.                                    */
+
+ - Switch control blocks must be indented setting the "case ...:" and "default:"
+   keywords at a different level than the body of the condition. Example:
+        switch(var) {                           /* Same rules.              */
+            case 1:                             /* 1 indent. step applied.  */
+            case 2:
+            case 3:
+                printf("Var is 1, 2 or 3\n");   /* 2 indent. steps applied. */
+                break;                          /* 2 indent. steps applied. */
+            case 4:
+                printf("Var is 4\n");
+                break;
+            default:
+                printf("Var is not 1, 2, 3 or 4\n");
+                break;
+        }
 
 
 5. Naming
@@ -191,10 +201,10 @@ An exception is the opening brace for a function. It comes on a line by itself:
         #define B   4
         /* ---- case 1: */
         #define C   A + B 
-        #define D   A * C /* The result will be 13. */
+        #define D   A * C   /* The result will be 13. */
         /* ---- case 2: */
         #define C   (A + B) 
-        #define D   A * C /* The result will be 21. */
+        #define D   (A * C) /* The result will be 21. */
         
 
 9. Comments and in-code documentation
@@ -207,37 +217,56 @@ An exception is the opening brace for a function. It comes on a line by itself:
    grammatically correct. Do use punctuation (commas, full stops, parentheses 
    and hyphens) and a proper language (e.g. avoid slang words, use technical 
    expressions).
-<<<< Options:
-------------- Carles:
- - Functions and files must be documented according to the Doxygen 
-   specifications. (TODO: complete/discuss with the rest of the team).
->>>>
+ - Functions and files must be documented according to the JavaDoc (for Java 
+   code), PlDoc (for Prolog code) and Doxygen (for the rest of the languages)
+   specifications.
 
-10. Git repository (are they "code style rules"?)
---------------------------------------------------------------------------------
- - TODO
 
- 
 11. Reliability, debug easiness and flexibility
 --------------------------------------------------------------------------------
  - Based on Holzmann's "The Power of Ten: Rules for Developing Safety Critical 
    Code", NASA/JPL Laboratory for Reliable Software, available at
-   <http://spinroot.com/gerard/pdf/P10.pdf>, the following rules should be 
-   applied to the software developed for ABS. Their rationale is detailed in the 
-   aforementioned paper. (TODO, modify/remove some of these rules if necessary)
+   <http://spinroot.com/gerard/pdf/Power_of_Ten.pdf>, the following rules should 
+   be applied to the software developed for ABS. Their rationale is detailed in 
+   the aforementioned paper. (TODO, modify/remove some of these rules if 
+   necessary)
         1.  Restrict all code to very simple control flow constructs –do not use 
             goto statements, setjmp or longjmp constructs, and direct or 
-            indirect recursion.
+            indirect recursion. 
+            Exception: "goto" statements can be used to implement cleaning 
+            sections before the return of a function. The purpose of this rule 
+            is only to provide an easy way to clean/free multiple resources 
+            which could have not been gained due to partial errors. Example:
+                int function()
+                {
+                    int error;
+                    if((error = do_something(1)) < 0) goto clean3;
+                    if((error = do_something(2)) < 0) goto clean2;
+                    if((error = do_something(3)) < 0) goto clean1;
+                clean1:
+                    undo_something(3);
+                clean2:
+                    undo_something(2);
+                clean3:
+                    undo_something(1);
+                    return error;
+                }
         2.  All loops must have a fixed upper-bound. It must be trivially
             possible for a checking tool to prove statically that a preset 
             upper-bound on the number of iterations of a loop cannot be 
             exceeded. If the loop-bound cannot be proven statically, the rule is 
             considered violated.
-        3.  Do not use dynamic memory allocation after initialization.
+        3.  Reduce the number of dynamic allocations to the minimum possible. If
+            the size of memory blocks can be predicted (at compile time), it is
+            compulsory to declare the memory region size statically.
+            Pointers are allowed only when there's a clear justification for 
+            them. If a section initializes a memory block (i.e. calls some of 
+            the malloc() family functions) it is strictly mandatory to include 
+            complementary free calls. 
         4.  No function should be longer than what can be printed on a single 
             sheet of paper in a standard reference format with one line per 
             statement and one line per declaration. Typically, this means no 
-            more than about 60 lines of code per function.
+            more than about 100 lines of code per function.
         5.  The assertion density of the code should average to a minimum of two 
             assertions per function. Assertions are used to check for anomalous 
             conditions that should never happen in real-life executions. 
@@ -255,7 +284,7 @@ An exception is the opening brace for a function. It comes on a line by itself:
                 }
             with the assertion defined as follows:
                 #define c_assert(e) ((e) ? (true) : \
-                    tst_debugging(”%s,%d: assertion ’%s’ failed\n”, \
+                    tst_debugging("%s,%d: assertion '%s' failed\n", \
                     __FILE__, __LINE__, #e), false)
             In this definition, __FILE__ and __LINE__ are predefined by the 
             macro preprocessor to produce the filename and line-number of the 
@@ -266,26 +295,14 @@ An exception is the opening brace for a function. It comes on a line by itself:
             tst_debugging is turned into a no-op, and  the assertion turns into 
             a pure Boolean test that enables error recovery from anomolous 
             behavior.
-        6.  Data objects must be declared at the smallest possible level of 
-            scope.
         7.  The return value of non-void functions must be checked by each 
             calling function, and the validity of parameters must be checked 
             inside each function.
-        8.  The use of the preprocessor must be limited to the inclusion of 
-            header files and simple macro definitions. Token pasting, variable 
-            argument lists (ellipses), and recursive macro calls are not 
-            allowed. All macros must expand into complete syntactic units. The 
-            use of conditional compilation directives is often also dubious, but 
-            cannot always be avoided. This means that there should rarely be 
-            justification for more than one or two conditional compilation 
-            directives even in large software development efforts, beyond the 
-            standard boilerplate that avoids multiple inclusion of the same 
-            header file. Each such use should be flagged by a tool-based checker 
-            and justified in the code.
         9.  The use of pointers should be restricted. Specifically, no more than 
             one level of dereferencing is allowed. Pointer dereference 
             operations may not be hidden in macro definitions or inside typedef 
-            declarations. Function pointers are not permitted.
+            declarations. Function pointers are only permitted when the have a
+            direct and clear justification.
         10. All code must be compiled, from the first day of development, with 
             all compiler warnings enabled at the compiler’s most pedantic 
             setting. All code must compile with these setting without any 
