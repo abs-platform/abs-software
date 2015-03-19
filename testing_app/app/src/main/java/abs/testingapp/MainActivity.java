@@ -6,7 +6,7 @@ import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Button;
+import android.widget.AdapterView;
 import android.widget.ListView;
 
 import java.util.ArrayList;
@@ -14,7 +14,6 @@ import java.util.List;
 
 import abs.classes.Item;
 import abs.classes.ItemAdapter;
-import abs.services.DemoService;
 import abs.services.GoodService;
 
 
@@ -32,26 +31,23 @@ public class MainActivity extends ActionBarActivity {
         List<Item> items = createList();
         this.listView.setAdapter(new ItemAdapter(this, items));
 
-        /* Start and trigger a service */
-        Intent service = new Intent(MainActivity.this, GoodService.class);
-        /* Add data to the intent */
-        service.putExtra("key", "Message!");
-        startService(service);
-
-        /* Set the click listener for buttons on listView and start the
-        service if the user clicks */
-        /*
-        final Button start_button = (Button) findViewById(R.id.tv_button);
-        start_button.setOnClickListener(new View.OnClickListener() {
+        /* Set the click listener for listView items and start the
+        service if the user clicks one of them */
+        listView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
-            public void onClick(View v)
-            {
-                // access item properties identifying which button is clicked
-                // do a item.get_id() to know which service to start
-                startService(new Intent(MainActivity.this, DemoService.class));
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                /* Identify the item that is clicked */
+                Item item = (Item) parent.getItemAtPosition(position);
+                Intent service = new Intent(MainActivity.this,
+                        GoodService.class);
+                /* Get the item id and pass it to the service to know which
+                test to start */
+                service.putExtra("key", item.get_id());
+
+                startService(service);
             }
         });
-        */
+
     }
 
 

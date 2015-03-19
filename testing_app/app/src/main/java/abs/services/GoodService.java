@@ -12,16 +12,15 @@ public class GoodService extends Service{
     @Override
     public void onCreate()
     {
-        /* Do something */
+        /* Do something... or not */
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId)
     {
-        String msg = intent.getStringExtra("key");
+        String key = intent.getStringExtra("key");
 
-        Toast.makeText(this, "GoodService starting with: "+msg,
-                Toast.LENGTH_SHORT).show();
+        selectTest(key);
 
         return Service.START_NOT_STICKY;
     }
@@ -30,6 +29,38 @@ public class GoodService extends Service{
     public IBinder onBind(Intent intent)
     {
         return null;
+    }
+
+    /**
+     * Does the test selection switching from a given key parameter
+     * @param key
+     */
+    private void selectTest(String key)
+    {
+        switch(key){
+            case "sdb_conn":
+                Toast.makeText(this, "Starting SDB test...",
+                        Toast.LENGTH_SHORT).show();
+                break;
+            case "arduino":
+                Toast.makeText(this, "Starting Arduino test...",
+                        Toast.LENGTH_SHORT).show();
+                break;
+            case "bat":
+                Toast.makeText(this, "Starting battery state test...",
+                        Toast.LENGTH_SHORT).show();
+                break;
+            case "mem":
+                Toast.makeText(this, "Starting memory usage test...",
+                        Toast.LENGTH_SHORT).show();
+                break;
+            case "cpu":
+                Toast.makeText(this, "Starting CPU test...",
+                        Toast.LENGTH_SHORT).show();
+                break;
+            default:
+                throw new RuntimeException("Incorrect item selection");
+        }
     }
 
 }
