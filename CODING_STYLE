@@ -35,12 +35,6 @@ to embed code in DIN-A4 documents.
         b    = a + 1;
         c_2  = b * 4;
         c_2 *= a;
-<<<< Options:
-------------- Marc:
- - Put spaces between conditional statements and the first parentheses:
-        while (x > 0)
-------------- Carles:
->>>>
  - Do not leave whitespace dangling off the ends of lines.
  - Leave one empty line between logical groups of instructions.
  - Leave one empty line between functions.
