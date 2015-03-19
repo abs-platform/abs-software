@@ -25,6 +25,10 @@ public class DemoService extends Service { // has to extend from PayloadApp
      * Handler class that receives messages from the thread
      */
     private final class ServiceHandler extends Handler {
+        /**
+         * Constructor
+         * @param looper
+         */
         public ServiceHandler(Looper looper)
         {
             super(looper);
@@ -41,6 +45,7 @@ public class DemoService extends Service { // has to extend from PayloadApp
                     try {
                         wait(endTime - System.currentTimeMillis());
                     } catch (Exception e) {
+                        e.printStackTrace();
                     }
                 }
             }
@@ -72,7 +77,11 @@ public class DemoService extends Service { // has to extend from PayloadApp
     }
 
     /**
-     * The system calls this method when startService() is called
+     * The system calls this method when startService() is called and after
+     * calling onCreate()
+     * @param intent
+     * @param flags
+     * @param startId
      */
     public int onStartCommand(Intent intent, int flags, int startId)
     {
@@ -91,7 +100,8 @@ public class DemoService extends Service { // has to extend from PayloadApp
     /**
      * The system calls this method when another component wants to bind with the
      * service by calling bindService()
-     * @return
+     * @param intent
+     * @return IBinder
      */
     public IBinder onBind(Intent intent)
     {
@@ -101,7 +111,7 @@ public class DemoService extends Service { // has to extend from PayloadApp
     /**
      * All clients have unbound with unbindService()
      * @param intent
-     * @return
+     * @return boolean
      */
     public boolean onUnbind(Intent intent)
     {
