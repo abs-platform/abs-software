@@ -25,13 +25,16 @@ public class DemoService extends Service { // has to extend from PayloadApp
      * Handler class that receives messages from the thread
      */
     private final class ServiceHandler extends Handler {
-        public ServiceHandler(Looper looper) {
+        public ServiceHandler(Looper looper)
+        {
             super(looper);
         }
+
         @Override
-        public void handleMessage(Message msg) {
-            // Normally we would do some work here, like download a file.
-            // For our sample, we just sleep for 5 seconds.
+        public void handleMessage(Message msg)
+        {
+            /* Normally we would do some work here, like download a file */
+            /* For our sample, we just sleep for 5 seconds */
             long endTime = System.currentTimeMillis() + 5*1000;
             while (System.currentTimeMillis() < endTime) {
                 synchronized (this) {
@@ -52,18 +55,18 @@ public class DemoService extends Service { // has to extend from PayloadApp
      */
     public void onCreate()
     {
-        // If we get killed, after returning from onStartCommand, restart
+        /* If we get killed, after returning from onStartCommand, restart */
         mStartMode = START_STICKY;
 
-        // Start up the thread running the service.  Note that we create a
-        // separate thread because the service normally runs in the process's
-        // main thread, which we don't want to block.  We also make it
-        // background priority so CPU-intensive work will not disrupt our UI.
+        /* Start up the thread running the service.  Note that we create a
+        separate thread because the service normally runs in the process's
+        main thread, which we don't want to block.  We also make it
+        background priority so CPU-intensive work will not disrupt our UI */
         HandlerThread thread = new HandlerThread("ServiceStartArguments",
                 Process.THREAD_PRIORITY_BACKGROUND);
         thread.start();
 
-        // Get the HandlerThread's Looper and use it for our Handler
+        /* Get the HandlerThread's Looper and use it for our Handler */
         _mServiceLooper = thread.getLooper();
         _mServiceHandler = new ServiceHandler(_mServiceLooper);
     }

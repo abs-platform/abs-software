@@ -4,14 +4,27 @@ import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.ListView;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import abs.classes.Item;
+import abs.classes.ItemAdapter;
 
 
 public class MainActivity extends ActionBarActivity {
+
+    public ListView listView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        this.listView = (ListView) findViewById(R.id.listView);
+
+        this.listView.setAdapter(new ItemAdapter(this, createList()));
     }
 
 
@@ -35,5 +48,22 @@ public class MainActivity extends ActionBarActivity {
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    /**
+     * Creates and populates the list of items
+     * @return List<Item>
+     */
+    private List<Item> createList()
+    {
+        List<Item> items = new ArrayList<>();
+
+        items.add(new Item("SDB connection"));
+        items.add(new Item("Arduino"));
+        items.add(new Item("Battery State"));
+        items.add(new Item("Memory Usage"));
+        items.add(new Item("CPU Usage"));
+
+        return items;
     }
 }
