@@ -1,7 +1,4 @@
-#include <fcntl.h>
-#include <stdio.h>
-#include <string.h>
-#include "usb_queue.h"
+#include "sdb_usb.h"
 
 /*
 enum MCSType {
@@ -25,7 +22,7 @@ typedef struct MCSPacket {
 
 */
 
-byte[] mcsConvert(MCSPacket packet)
+byte[] sdbToUsb(MCSPacket packet)
 {
 	if(packet.type == MCS_TYPE_PAYLOAD) {
 
@@ -41,14 +38,20 @@ byte[] mcsConvert(MCSPacket packet)
 }
 
 
-void sdb_usb()
+
+void* usb_thread(void *arg)
 {
-	byte[] packet;
+	char *packet;
+
+	int fd = open(THE_DEVICE, O_RDWR);
 
 	MCSPacket packet;
 
-	while(1){
-		while((packet=usb_queue_pop())==NULL);
+	while(packet = usb_queue_pop()){
+		char[] buf = sdbToUsb(packet);
+		write(fd,&buffer,sizeof(buffer));	
+		read(fd,&response);
+		pthread_cond_signal(&cond);	
 	}
 }
 

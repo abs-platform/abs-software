@@ -19,7 +19,7 @@ typedef struct {
 	int n, alloc; 
 } *UsbQueue, UsbQueueT;
 
-extern usb_queue queue;
+extern UsbQueue queue;
 
 extern pthread_mutex_t usb_queue_lock;
 

@@ -13,6 +13,7 @@
 #include <sys/param.h>
 #include <sys/stat.h>
 #include <ctype.h>
+#include "sdb_usb.h"
 
 #include "usb_queue.h"
 
