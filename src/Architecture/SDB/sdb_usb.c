@@ -1,58 +1,47 @@
 #include "sdb_usb.h"
 
-/*
-enum MCSType {
-    MCS_TYPE_MESSAGE    = 0,
-    MCS_TYPE_STATE      = 1,
-    MCS_TYPE_PAYLOAD    = 2,
-    MCS_TYPE_OK         = 253,
-    MCS_TYPE_OK_DATA    = 254,
-    MCS_TYPE_ERR        = 255,
-};
-
-// Datatype for the packets that can be sent to and from the SDB 
-typedef struct MCSPacket {
-    enum MCSType type;
-    unsigned short cmd;
-    unsigned short nargs;
-    unsigned char *args;
-    unsigned short data_size;
-    unsigned char *data;
-} MCSPacket;
-
-*/
-
-byte[] sdbToUsb(MCSPacket packet)
+static char *sdb_to_usb(MCSPacket *packet, int *size)
 {
-	if(packet.type == MCS_TYPE_PAYLOAD) {
+    char *usb_packet = malloc(MAX_SIZE_USB_PACKET);
 
-		MCSCommandOptionsPayload = packet.cmd
-
-		byte packet[] = {(byte)packet.command,(byte)10}
-
-		return packet;
-
-	} else {
-		return NULL;
-	}
+    if(packet->type == MCS_TYPE_PAYLOAD) {
+        MCSCommandOptionsPayload pack = option_payload[packet->cmd];
+        usb_packet = {'a','b'};
+        //TODO
+        *size = 2;
+        return usb_packet;
+    } else {
+        return NULL;
+    }
 }
 
-
-
-void* usb_thread(void *arg)
+void *usb_thread(void *arg)
 {
-	char *packet;
+    char *buffer;
+    QueueElement *element;
+    MCSPacket *response;
+    int data_size, packet_size, response_type;
+    char response_usb[MAX_SIZE_USB_PACKET];
+    int fd = open(SDB_USB_DEVICE, O_RDWR);
 
-	int fd = open(THE_DEVICE, O_RDWR);
-
-	MCSPacket packet;
-
-	while(packet = usb_queue_pop()){
-		char[] buf = sdbToUsb(packet);
-		write(fd,&buffer,sizeof(buffer));	
-		read(fd,&response);
-		pthread_cond_signal(&cond);	
-	}
+    while(element = usb_queue_pop()) {
+        buffer = sdb_to_usb(element->data, &packet_size);
+        write(fd, buffer, packet_size);
+        read(fd, response_usb, MAX_SIZE_USB_PACKET);
+        response_type = (response_usb[0] << 3) & 0x03;
+        switch(response_type) {
+            case OK:
+                response = mcs_ok_packet();
+                break;
+            case OK_DATA:
+                data_size = (int)(result[0] << 1);
+                response = mcs_ok_packet_data(&response_usb[2], data_size);
+                break;
+            case ERROR:
+                response = mcs_err_packet(EHWFAULT);
+                break;
+        }
+        write_mcs_packet_module(response, element->id_process);
+        free(buffer);
+    }
 }
-
-

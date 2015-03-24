@@ -1,6 +1,6 @@
 package com.google.abs.payloadsdk.Measures;
 
 
-public class Attitude {
+public class Attitude extends SystemValue {
     //TODO
 }

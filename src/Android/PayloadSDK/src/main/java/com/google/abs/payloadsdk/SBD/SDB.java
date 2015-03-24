@@ -1,13 +1,17 @@
 package com.google.abs.payloadsdk.SBD;
 
-import android.util.Log;
 import java.net.Socket;
+import android.util.Log;
 import java.io.IOException;
+import android.os.AsyncTask;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import android.os.SystemClock;
 
-public class SDB extends android.os.AsyncTask<Void, Void, Void> {
+public class SDB extends AsyncTask<Void, Void, Void> {
+
+    private static final int PORT = 1111;
+    private static final String INET_ADDR = "127.0.0.1";
 
     private byte[] result;
     private Socket socket;
@@ -19,7 +23,7 @@ public class SDB extends android.os.AsyncTask<Void, Void, Void> {
     protected Void doInBackground(Void... params)
     {
         try {
-            socket = new Socket("127.0.0.1", 1111);
+            socket = new Socket(INET_ADDR, PORT);
             rxStream = new DataInputStream(socket.getInputStream());
             txStream = new DataOutputStream(socket.getOutputStream());
             Log.d("[ABS]", "Connection established");
@@ -27,11 +31,14 @@ public class SDB extends android.os.AsyncTask<Void, Void, Void> {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        result = receive();
-        while(connected) {
+        waitForSocketToConnect(); /* TODO handle error if socket fails */
+        if(socket.isConnected()) {
             result = receive();
+            while (connected) {
+                result = receive();
+            }
         }
-        return null;
+        return null; /* error */
     }
 
     /**
@@ -41,7 +48,7 @@ public class SDB extends android.os.AsyncTask<Void, Void, Void> {
      * @return          response to the SDBPacket
      */
 
-    public byte[] send(SDBPacket packet)
+    public synchronized SDBPacket send(SDBPacket packet)
     {
         waitForSocketToConnect();
         if(socket.isConnected()) {
@@ -54,12 +61,12 @@ public class SDB extends android.os.AsyncTask<Void, Void, Void> {
                     SystemClock.sleep(500);
                 }
                 Log.d("[ABS]", "Packet received");
-                return result;
+                return new SDBPacket(result);
             } catch (IOException e) {
                 e.printStackTrace();
             }
         }
-        return null;
+        return null; /* error */
     }
 
     private byte[] receive()
@@ -76,15 +83,21 @@ public class SDB extends android.os.AsyncTask<Void, Void, Void> {
 
     private boolean waitForSocketToConnect()
     {
-        if (connected)
+        if(connected) {
             return true;
-        while (!connected) {
+        }
+        int count = 0;
+        while(!connected) {
             try {
                 Thread.sleep(500);
+                count++;
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
+            if(count>20) {
+                break; /* Exit and return false */
+            }
         }
-        return connected;
+        return connected; //return error code
     }
 }

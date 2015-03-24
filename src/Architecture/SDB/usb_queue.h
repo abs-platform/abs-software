@@ -1,34 +1,37 @@
-#ifndef USB_QUEUE_H
-#define USB_QUEUE_H
+#ifndef __USB_QUEUE_H
+#define __USB_QUEUE_H
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <pthread.h>
 #include <semaphore.h>
 
-#include "sdb_dummy.h" //sdb.h
+#include "sdb.h"
+#include <sdb.h>
 
-#define MAX_SIZE 128
+#define USB_QUEUE_SIZE 128
 
-typedef struct { 
-	void * data; 
-	int priority; 
-} QueueElem;
+typedef struct QueueElement { 
+    void * data; 
+    int id_process; 
+    int priority;
+} QueueElement;
 
-typedef struct { 
-	QueueElem *buf; 
-	int n, alloc; 
-} *UsbQueue, UsbQueueT;
+typedef struct USBQueue { 
+    QueueElement *buf; 
+    int n, alloc; 
+} USBQueue;
 
-extern UsbQueue queue;
+extern USBQueue queue;
 
 extern pthread_mutex_t usb_queue_lock;
 
 extern sem_t packet_queue_count;
 
-void usb_queue_init();
+void usb_queue_init(void);
 
-void usb_queue_push(void *data, int pri);
+void usb_queue_push(void *data, int id_process);
 
-void *usb_queue_pop(int *pri);
+void *usb_queue_pop(void);
 
-#endif /* USB_QUEUE_H */
+#endif /* __USB_QUEUE_H */

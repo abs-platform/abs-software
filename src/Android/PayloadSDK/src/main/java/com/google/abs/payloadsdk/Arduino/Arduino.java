@@ -1,8 +1,6 @@
 package com.google.abs.payloadsdk.Arduino;
 
 import android.util.Log;
-
-import com.google.abs.payloadsdk.CmdType;
 import com.google.abs.payloadsdk.SBD.SDB;
 import com.google.abs.payloadsdk.SBD.SDBPacket;
 
@@ -25,27 +23,38 @@ public class Arduino {
      *
      * @param pin   the number of the digital pin you want to write (int)
      * @param value 1 or 0
-     * @return      error_code
+     * @return      (integer) error_code
      */
 
     public int digitalWrite(int pin, int value)
     {
-        byte[] measure = sdb.send(new SDBPacket(CmdType.DIGITAL_WRITE,(byte)pin));
-        Log.d("[ABS]", String.valueOf(measure[3]));
-        return (int) measure[2];
+        SDBPacket response = sdb.send(new SDBPacket(
+                SDBPacket.CMD.DIGITAL_WRITE,(byte)pin,(byte)value));
+
+        if(response.getCMD() == SDBPacket.CMD.OK) {
+            return 1;
+        } else {
+            return -1; /* something has gone wrong */
+        }
     }
 
     /**
      * Reads the value from a specified digital pin.
      *
      * @param pin   the number of the digital pin you want to read (int)
-     * @return      1 or 0
+     * @return      (boolean) 1 or 0
      */
 
     public int digitalRead(int pin)
     {
-        byte[] measure = sdb.send(new SDBPacket(CmdType.DIGITAL_READ,(byte)pin));
-        return (int) measure[2];
+        SDBPacket response = sdb.send(new SDBPacket(
+                SDBPacket.CMD.DIGITAL_READ,(byte)pin));
+
+        if(response.getCMD() == SDBPacket.CMD.OK_DATA) {
+            return response.getParameter(0);
+        } else {
+            return -1; /* something has gone wrong */
+        }
     }
 
     /**
@@ -53,25 +62,38 @@ public class Arduino {
      *
      * @param pin   the number of the analog pin you want to write (int)
      * @param value the duty cycle: between 0 and 255
-     * @return      error_code
+     * @return      (integer) error_code
      */
 
     public int analogWrite(int pin, int value)
     {
-        byte[] measure = sdb.send(new SDBPacket(CmdType.ANALOG_WRITE,(byte)pin));
-        return (int) measure[2];
+        SDBPacket response = sdb.send(new SDBPacket(
+                SDBPacket.CMD.ANALOG_WRITE,(byte)pin, (byte)value));
+
+        if(response.getCMD() == SDBPacket.CMD.OK) {
+            return 1;
+        } else {
+            return -1; /* something has gone wrong */
+        }
     }
 
     /**
      * Reads the value from a specific analog pin.
      *
      * @param pin   the number of the analog pin you want to read (int)
-     * @return      (int) 0 to 1023
+     * @return      (integer) 0 to 1023
      */
 
-    public int analoglRead(int pin)
+    public int analogRead(int pin)
     {
-        byte[] measure = sdb.send(new SDBPacket(CmdType.ANALOG_READ,(byte)pin));
-        return (int) measure[2];
+        SDBPacket response = sdb.send(new SDBPacket(
+                SDBPacket.CMD.ANALOG_READ,(byte)pin));
+
+        if(response.getCMD() == SDBPacket.CMD.OK_DATA) {
+            return response.getParameter(0);
+            /* TODO convert value to volts */
+        } else {
+            return -1; /* something has gone wrong */
+        }
     }
 }
