@@ -12,17 +12,5 @@
         android:textAlignment="center"
         android:gravity="center"
         android:textAppearance="?android:attr/textAppearanceMedium" />
-<!--
-    <Button
-        android:id="@+id/tv_button"
-        android:layout_width="wrap_content"
-        android:layout_height="match_parent"
-        android:singleLine="true"
-        android:textIsSelectable="false"
-        android:textAppearance="?android:attr/textAppearanceMedium"
-        android:text="@string/start_button"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentRight="true"
-        android:layout_alignParentEnd="true" />
--->
+
 </RelativeLayout>

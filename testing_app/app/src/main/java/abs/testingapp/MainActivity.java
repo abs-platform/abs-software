@@ -38,13 +38,16 @@ public class MainActivity extends ActionBarActivity {
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 /* Identify the item that is clicked */
                 Item item = (Item) parent.getItemAtPosition(position);
-                Intent service = new Intent(MainActivity.this,
-                        GoodService.class);
-                /* Get the item id and pass it to the service to know which
-                test to start */
-                service.putExtra("key", item.get_id());
 
-                startService(service);
+                /* Start the corresponding activity */
+                Intent intent = new Intent(MainActivity.this,
+                        PayloadActivity.class);
+                /* Get the item id and pass it to the activity to know which
+                test to start */
+                intent.putExtra("id", item.get_id());
+                intent.putExtra("title", item.get_title());
+
+                startActivity(intent);
             }
         });
 

@@ -8,8 +8,10 @@
         android:label="@string/app_name"
         android:theme="@style/AppTheme" >
 
-        <service android:name="abs.services.DemoService" />
-        <service android:name="abs.services.GoodService" />
+        <!-- Declare the service so that other apps cannot start it -->
+        <service
+            android:name="abs.services.GoodService"
+            android:exported="false"/>
 
         <activity
             android:name=".MainActivity"
@@ -19,6 +21,16 @@
 
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".PayloadActivity"
+            android:label="@string/title_activity_payload"
+            android:parentActivityName=".MainActivity" >
+            <!-- This supports user navigation for lower level API  -->
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".MainActivity" />
         </activity>
 
     </application>
