@@ -5,9 +5,11 @@ import android.content.Intent;
 import android.os.*;
 import android.widget.Toast;
 
-import com.abs.PayloadApp;
+import com.google.abs.payloadsdk.Arduino.Arduino;
+import com.google.abs.payloadsdk.PayloadAPP;
 
-public class GoodService extends Service{ // Has to extend PayloadApp
+
+public class GoodService extends PayloadAPP {
 
     private final IBinder mBinder = new LocalBinder();
 
@@ -22,6 +24,11 @@ public class GoodService extends Service{ // Has to extend PayloadApp
             methods */
             return GoodService.this;
         }
+    }
+
+    public GoodService()
+    {
+        super("TestingService");
     }
 
     @Override
