@@ -51,4 +51,22 @@ public class Item{
         return this.title;
     }
 
+    /**
+     * Gets the activity name to be run when an item is clicked
+     * @return The name of the activity
+     */
+    public String get_activity()
+    {
+        String id = this.get_id();
+
+        if (this.get_id().length() > 1) {
+            String capId = id.substring(0, 1).toUpperCase() + id.substring
+                    (1);
+
+            return "abs.testingapp." + capId + "Activity";
+        }
+
+        return null;
+    }
+
 }

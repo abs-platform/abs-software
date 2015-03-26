@@ -1,6 +1,7 @@
 package abs.testingapp;
 
 
+import android.support.v7.app.ActionBarActivity;
 import abs.services.TestService.LocalBinder;
 import abs.services.TestService;
 
@@ -10,14 +11,11 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.support.v7.app.ActionBarActivity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.TextView;
 
-
-public class PayloadActivity extends ActionBarActivity {
+public class ArduinoActivity extends ActionBarActivity {
 
     public TestService mService;
     public boolean mBound = false;
@@ -26,19 +24,15 @@ public class PayloadActivity extends ActionBarActivity {
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_payload);
+        setContentView(R.layout.activity_android);
 
         /* Get the intent and the passed parameters */
-        Intent intent = getIntent();
-        String id = intent.getStringExtra("id");
-        String title = intent.getStringExtra("title");
-
-        setTitle(title+" test");
+        //Intent intent = getIntent();
 
         /* Start the service on creating the activity */
-        Intent service = new Intent(PayloadActivity.this, TestService.class);
+        Intent service = new Intent(ArduinoActivity.this, TestService.class);
         /* Pass the item id to the service to know which test to start */
-        service.putExtra("id", id);
+        //service.putExtra("id", intent.getStringExtra("id"));
 
         startService(service);
         /* Bind to the service so that we can interact with it */
@@ -51,19 +45,29 @@ public class PayloadActivity extends ActionBarActivity {
         super.onStart();
     }
 
+    @Override
+    protected void onStop()
+    {
+        super.onStop();
+        if(mBound)
+        {
+            unbindService(mConnection);
+            mBound = false;
+        }
+    }
+
     /**
      * Called when the check button is clicked
      * @param v
      */
     public void onButtonClick(View v)
     {
+        /* If the service is bound... */
         if (mBound) {
-            TextView tv = (TextView) findViewById(R.id.payload_text);
-            tv.append("\nService bound");
             /* Call a method from the LocalService. However, if this call were
             something that might hang, then this request should occur in a
             separate thread to avoid slowing down the activity performance. */
-            mService.runTest("android");
+            mService.runTest("arduino");
         }
     }
 
@@ -100,8 +104,7 @@ public class PayloadActivity extends ActionBarActivity {
             /* Because we have bound to an explicit service that is running
             in our own process, we can cast its IBinder to a concrete class
             and directly access it */
-            LocalBinder binder = (LocalBinder) service;
-            mService = binder.getService();
+            mService = ((LocalBinder) service).getService();
             mBound = true;
         }
 

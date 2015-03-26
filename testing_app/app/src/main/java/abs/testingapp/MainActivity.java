@@ -14,8 +14,6 @@ import java.util.List;
 
 import abs.classes.Item;
 import abs.classes.ItemAdapter;
-import abs.services.GoodService;
-
 
 public class MainActivity extends ActionBarActivity {
 
@@ -40,17 +38,19 @@ public class MainActivity extends ActionBarActivity {
                 Item item = (Item) parent.getItemAtPosition(position);
 
                 /* Start the corresponding activity */
-                Intent intent = new Intent(MainActivity.this,
-                        PayloadActivity.class);
-                /* Get the item id and pass it to the activity to know which
-                test to start */
-                intent.putExtra("id", item.get_id());
-                intent.putExtra("title", item.get_title());
+                try {
+                    Class c = Class.forName(item.get_activity());
+                    Intent intent = new Intent(MainActivity.this, c);
+                    /* Get the item id and pass it to the activity to know which
+                    test to start */
+                    intent.putExtra("id", item.get_id());
 
-                startActivity(intent);
+                    startActivity(intent);
+                } catch(ClassNotFoundException e){
+                    System.out.println("Class not found: " + e.getMessage());
+                }
             }
         });
-
     }
 
 
@@ -84,10 +84,10 @@ public class MainActivity extends ActionBarActivity {
     {
         List<Item> items = new ArrayList<>();
 
-        items.add(new Item("sdb_conn", "SDB connection"));
+        items.add(new Item("sdb", "SDB connection"));
         items.add(new Item("arduino", "Arduino"));
-        items.add(new Item("bat", "Battery State"));
-        items.add(new Item("mem", "Memory Usage"));
+        items.add(new Item("battery", "Battery State"));
+        items.add(new Item("memory", "Memory Usage"));
         items.add(new Item("cpu", "CPU Usage"));
 
         return items;

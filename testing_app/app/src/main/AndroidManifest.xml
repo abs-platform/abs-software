@@ -14,7 +14,7 @@
 
         <!-- Declare the service so that other apps cannot start it -->
         <service
-            android:name="abs.services.GoodService"
+            android:name="abs.services.TestService"
             android:exported="false"/>
 
         <activity
@@ -30,6 +30,16 @@
         <activity
             android:name=".PayloadActivity"
             android:label="@string/title_activity_payload"
+            android:parentActivityName=".MainActivity" >
+            <!-- This supports user navigation for lower level API  -->
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value=".MainActivity" />
+        </activity>
+
+        <activity
+            android:name=".ArduinoActivity"
+            android:label="@string/title_activity_arduino"
             android:parentActivityName=".MainActivity" >
             <!-- This supports user navigation for lower level API  -->
             <meta-data

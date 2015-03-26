@@ -3,6 +3,7 @@
     <string name="app_name">Testing App</string>
 
     <string name="title_activity_payload">Executing Test</string>
+    <string name="title_activity_arduino">Arduino Test</string>
 
     <string name="action_settings">Settings</string>
     <string name="action_search">Search</string>

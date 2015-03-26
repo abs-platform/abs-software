@@ -8,27 +8,27 @@ import android.widget.Toast;
 import com.google.abs.payloadsdk.Arduino.Arduino;
 import com.google.abs.payloadsdk.PayloadAPP;
 
-
-public class GoodService extends PayloadAPP {
+public class TestService extends Service {
 
     private final IBinder mBinder = new LocalBinder();
 
     /**
      * Class used for the client Binder. Because we know this service always
      * runs in the same process as its clients, we don't need to deal with IPC.
+     * -- That's maybe not true and we MAY want IPC --
      */
     public class LocalBinder extends Binder {
-        public GoodService getService()
+        public TestService getService()
         {
             /* Return this instance of LocalService so clients can call public
             methods */
-            return GoodService.this;
+            return TestService.this;
         }
     }
 
-    public GoodService()
+    public TestService()
     {
-        super("TestingService");
+        //super("TestService");
     }
 
     @Override
@@ -48,9 +48,14 @@ public class GoodService extends PayloadAPP {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId)
     {
+        /*
         String id = intent.getStringExtra("id");
 
         runTest(id);
+        */
+
+        Toast.makeText(this, "Starting service...",
+                Toast.LENGTH_SHORT).show();
 
         return Service.START_NOT_STICKY;
     }
@@ -92,6 +97,9 @@ public class GoodService extends PayloadAPP {
             case "arduino":
                 Toast.makeText(this, "Starting Arduino test...",
                         Toast.LENGTH_SHORT).show();
+
+                //Arduino arduino = this.getArduino();
+                //arduino.digitalRead(5);
                 break;
             case "bat":
                 Toast.makeText(this, "Starting battery state test...",
@@ -106,8 +114,13 @@ public class GoodService extends PayloadAPP {
                         Toast.LENGTH_SHORT).show();
                 break;
             default:
-                throw new RuntimeException("Incorrect item selection");
+                throw new RuntimeException("Incorrect test ID");
         }
+
+        /* Stops the service. We have to do it even if the service is bound
+        because it has called onStartCommand() and it won't stop unless we do
+         it */
+        stopSelf();
     }
 
 }
