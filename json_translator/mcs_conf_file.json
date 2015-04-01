@@ -1,7 +1,13 @@
 {
-    "command_list": [
-        "command1",
-        "command2",
-        "command3"
-    ]
+    "name" : "procman_start",
+    "description" : "Start the Process Manager",
+    "nargs" : 0,
+    "raw_data" : false,
+    "type" : "message",
+    "config" : {
+        "destination" : "procman",
+        "origin_groups" : ["syscore"],
+        "destination_groups" : [],
+        "response_size" : 0
+    }
 }
