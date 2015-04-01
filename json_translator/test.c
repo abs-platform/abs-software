@@ -13,7 +13,6 @@
 #define TYPE_LOCATION 4
 
 int identify_type (cJSON *json){
-    /*Access the fifth child, always the type*/
     int i;
     cJSON *subitem = json->child;
     for(i = 0; i < TYPE_LOCATION; i++) subitem = subitem->next;
@@ -25,6 +24,10 @@ int identify_type (cJSON *json){
 
 void translate_message (cJSON *json){
     //...
+    FILE *ofp;
+    ofp = fopen("printed.c", "w");
+    fprintf(ofp, "//Hello World");
+    fclose (ofp);
 }
 
 void translate_state (cJSON *json){
