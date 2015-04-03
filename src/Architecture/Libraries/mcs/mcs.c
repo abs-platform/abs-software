@@ -3,11 +3,13 @@
 #include <unistd.h>
 #include <abs.h>
 #include <mcs.h>
+#include <sdb.h>
 
 /* #define DEBUG 1 */
 
 static int read_check_config(int fd, MCSPacket *pkt)
 {
+    unsigned char dest_size;
     const MCSCommandOptionsCommon *cmd;
 
     if(pkt->type >= mcs_command_types) {
@@ -45,6 +47,26 @@ static int read_check_config(int fd, MCSPacket *pkt)
         }
     }
 
+    /* Read destination */
+    if(pkt->type == MCS_TYPE_MESSAGE &&
+                    mcs_command_message_list[pkt->cmd].destination[0] == '@') {
+        if(read(fd, &dest_size, sizeof(dest_size)) < sizeof(dest_size)) {
+            printf_dbg("Could not read\n");
+            return -1;
+        }
+
+        if(dest_size > SDB_MODULE_NAME_SIZE) {
+            printf_dbg("Name too long\n");
+            return -1;
+        }
+
+        pkt->dest = malloc(dest_size);
+        if(read(fd, pkt->dest, dest_size) < dest_size) {
+            printf_dbg("Could not read\n");
+            return -1;
+        }
+    }
+
     /* Read raw data */
     if(cmd->raw_data) {
         if(read(fd, &pkt->data_size, sizeof(pkt->data_size))
@@ -54,7 +76,7 @@ static int read_check_config(int fd, MCSPacket *pkt)
         }
 
         pkt->data = malloc(pkt->data_size);
-        if(read(fd, &pkt->data, pkt->data_size) < pkt->data_size) {
+        if(read(fd, pkt->data, pkt->data_size) < pkt->data_size) {
             printf_dbg("Could not read\n");
             return -1;
         }
@@ -194,32 +216,32 @@ void mcs_free(MCSPacket *pkt)
  * Read a command from a given file descriptor and translate it into a
  * MCSPacket
  */
-MCSPacket *mcs_read_command(int fd)
+MCSPacket *mcs_read_command(int rfd, int wfd)
 {
     MCSPacket *pkt;
     
-    if(fd < 0) {
+    if(rfd < 0) {
         printf_dbg("FD not valid\n");
         return NULL;
     }
 
     pkt = abs_malloc0(sizeof(*pkt));
 
-    if(read(fd, (char *)&pkt->type, sizeof(char)) < sizeof(char)) {
+    if(read(rfd, (char *)&pkt->type, sizeof(char)) < sizeof(char)) {
         printf_dbg("Could not read\n");
-        goto error;
+        goto error_no_notify;
     }
 
     switch(pkt->type) {
         case MCS_TYPE_MESSAGE:
         case MCS_TYPE_STATE:
         case MCS_TYPE_PAYLOAD:
-            if(read(fd, &pkt->cmd, sizeof(pkt->cmd)) < sizeof(pkt->cmd)) {
+            if(read(rfd, &pkt->cmd, sizeof(pkt->cmd)) < sizeof(pkt->cmd)) {
                 printf_dbg("Could not read\n");
                 goto error;
             }
 
-            if(read_check_config(fd, pkt) < 0) {
+            if(read_check_config(rfd, pkt) < 0) {
                 goto error;
             }
             break;
@@ -227,21 +249,21 @@ MCSPacket *mcs_read_command(int fd)
         case MCS_TYPE_ERR:
             pkt->data_size = sizeof(MCS_error_code);
             pkt->data = malloc(pkt->data_size);
-            if(read(fd, pkt->data, pkt->data_size) < pkt->data_size) {
+            if(read(rfd, pkt->data, pkt->data_size) < pkt->data_size) {
                 printf_dbg("Could not read\n");
                 goto error;
             }
             break;
 
         case MCS_TYPE_OK_DATA:
-            if(read(fd, &pkt->data_size, sizeof(pkt->data_size))
+            if(read(rfd, &pkt->data_size, sizeof(pkt->data_size))
                                                     < sizeof(pkt->data_size)) {
                 printf_dbg("Could not read\n");
                 goto error;
             }
 
             pkt->data = malloc(pkt->data_size);
-            if(read(fd, pkt->data, pkt->data_size) < pkt->data_size) {
+            if(read(rfd, pkt->data, pkt->data_size) < pkt->data_size) {
                 printf_dbg("Could not read\n");
                 goto error;
             }        
@@ -259,14 +281,16 @@ MCSPacket *mcs_read_command(int fd)
 
 error:
     mcs_free(pkt);
+    mcs_write_command_and_free(mcs_err_packet(EBADFORMAT), wfd);
+error_no_notify:
     return NULL;
 }
 
-int mcs_write_command(int fd, MCSPacket *pkt)
+int mcs_write_command(MCSPacket *pkt, int fd)
 {
-    size_t type_size, cmd_size, args_size, data_size_size, data_size;
-    size_t tot_size;
-    char *raw;
+    size_t type_size, cmd_size, args_size, dest_size, data_size_size, data_size;
+    size_t act_size, tot_size;
+    char *raw, *raw_act;
 
     if(check_packet(pkt) < 0) {
         return -1;
@@ -275,6 +299,7 @@ int mcs_write_command(int fd, MCSPacket *pkt)
     type_size = sizeof(char);
     cmd_size = sizeof(pkt->cmd);
     args_size = pkt->nargs * sizeof(*pkt->args);
+    dest_size = pkt->dest == NULL ? 0 : strlen(pkt->dest);
     data_size_size = sizeof(pkt->data_size);
     data_size = pkt->data_size * sizeof(*pkt->data);
 
@@ -302,23 +327,47 @@ int mcs_write_command(int fd, MCSPacket *pkt)
 
         default:
             tot_size = type_size + cmd_size + args_size;
-            
+
+            if(dest_size != 0) {
+                tot_size += sizeof(char);
+                tot_size += dest_size;
+            }
+
             if(data_size != 0) {
                 tot_size += data_size_size + data_size;
             }
 
             raw = malloc(tot_size);
+            raw_act = raw;
 
-            memcpy(raw, (char *)&pkt->type, type_size);
-            memcpy(raw + type_size, &pkt->cmd, cmd_size);
-            memcpy(raw + type_size + cmd_size, pkt->args, args_size);
+            memcpy(raw_act, (char *)&pkt->type, type_size);
+            raw_act += type_size;
+            memcpy(raw_act, &pkt->cmd, cmd_size);
+            raw_act += cmd_size;
+            memcpy(raw_act, pkt->args, args_size);
+            raw_act += args_size;
+
+            if(dest_size != 0) {
+                memcpy(raw_act, (unsigned char *)&dest_size,
+                                                    sizeof(unsigned char));
+                raw_act += sizeof(unsigned char);
+                memcpy(raw_act, pkt->dest, dest_size);
+                raw_act += dest_size;
+            }
 
             if(data_size != 0) {
-                memcpy(raw + type_size + cmd_size + args_size,
-                                            &pkt->data_size, data_size_size);
-                memcpy(raw + type_size + cmd_size + args_size + data_size_size,
-                                            pkt->data, data_size);
+                memcpy(raw_act, &pkt->data_size, data_size_size);
+                raw_act += data_size_size;
+                memcpy(raw_act, pkt->data, data_size);
+                raw_act += data_size;
             }
+
+#ifdef DEBUG
+            if((size_t)(raw_act - raw) != tot_size) {
+                printf_dbg("Real size is not expected size\n");
+                return -1;
+            }
+#endif
             break;
     }
 
@@ -331,9 +380,9 @@ int mcs_write_command(int fd, MCSPacket *pkt)
     return 0;
 }
 
-int mcs_write_command_and_free(int fd, MCSPacket *pkt)
+int mcs_write_command_and_free(MCSPacket *pkt, int fd)
 {
-    int ret = mcs_write_command(fd, pkt);
+    int ret = mcs_write_command(pkt, fd);
     mcs_free(pkt);
     return ret;
 }
@@ -388,11 +437,37 @@ MCSPacket *mcs_create_packet(MCSCommand cmd, unsigned short nargs,
     pkt->cmd = cmd & 0xFFFF;
     pkt->nargs = nargs;
     if(nargs != 0) {
-        pkt->args = abs_malloccpy(args, nargs);    
+        pkt->args = abs_malloccpy(args, nargs);
     }
     pkt->data_size = data_size;
     if(data_size != 0) {
-        pkt->data = abs_malloccpy(data, data_size);    
+        pkt->data = abs_malloccpy(data, data_size);
+    }
+
+    if(check_packet(pkt) >= 0) {
+        return pkt;
+    } else {
+        return NULL;
+    }
+}
+
+MCSPacket *mcs_create_packet_with_dest(MCSCommand cmd, unsigned char *dest,
+                            unsigned short nargs, unsigned char *args,
+                            unsigned short data_size, unsigned char *data)
+{
+    MCSPacket *pkt;
+
+    pkt = abs_malloc0(sizeof(*pkt));
+    pkt->type = (cmd & 0xF0000) >> 16;
+    pkt->cmd = cmd & 0xFFFF;
+    pkt->dest = dest;
+    pkt->nargs = nargs;
+    if(nargs != 0) {
+        pkt->args = abs_malloccpy(args, nargs);
+    }
+    pkt->data_size = data_size;
+    if(data_size != 0) {
+        pkt->data = abs_malloccpy(data, data_size);
     }
 
     if(check_packet(pkt) >= 0) {
