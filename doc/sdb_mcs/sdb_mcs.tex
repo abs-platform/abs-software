@@ -68,7 +68,7 @@ If \texttt{type} is \texttt{messages}, this command is a simple message sent fro
 \end{lstlisting}
 
 \begin{itemize}
-\item \texttt{destination}: the destination for this message. It can be static (the value is the name of the destination), an argument (the value is \texttt{@argX}, where X is the number of argument, starting by 0), or it can be \texttt{null} (the message is for the SDB).
+\item \texttt{destination}: the destination for this message. It can be static (the value is the name of the destination), an argument (the value is \texttt{@arg}), or it can be \texttt{null} (the message is for the SDB).
 \item \texttt{origin\_groups}: the array of groups that can send this command. Groups not mentioned cannot send the command. The wildcard \texttt{any} can be used, and all other elements in the array can be ignored.
 \item \texttt{destination\_groups}: the array of groups that can receive this command. If the destination is static or \texttt{null}, it should be ignored. Groups not mentioned cannot receive the command. The wildcard \texttt{any} can be used, and all other elements in the array can be ignored.
 \item \texttt{response\_size}: number of bytes expected back as the command response. It can be 0 if there is no expected response, or -1 if the size is unknown beforehand.
@@ -108,7 +108,6 @@ If \texttt{type} is \texttt{state}, this command relates with a system state, su
 If \texttt{type} is \texttt{payload}, this message will be sent through the USB Daemon to the payloads controller hardware (Arduino). The field \texttt{config} is defined as:
 \begin{lstlisting}
 {
-	"priority" : integer,
 	"command" : "string",
 	"parameters" : "string",
 	"arguments" : "string",
@@ -118,7 +117,6 @@ If \texttt{type} is \texttt{payload}, this message will be sent through the USB 
 \end{lstlisting}
 
 \begin{itemize}
-\item \texttt{priority}: priority of this command in the USB queue from 1 to 100. It is not guaranteed that all the levels will be used.
 \item \texttt{command} : string with the bits for the \texttt{cmd} field for the command.
 \item \texttt{parameters} : string with the bits for the \texttt{parameters} field for the command. Migth be the value of an argument, by using \texttt{@argX}, where X is the number of argument, starting by 0.
 \item \texttt{arguments}: string with the bits for the \texttt{arguments} field in the command. Migth be the value of an argument, by using \texttt{@argX}, where X is the number of argument, starting by 0.
@@ -165,7 +163,6 @@ If \texttt{type} is \texttt{payload}, this message will be sent through the USB 
 	"raw_data" : false,
 	"type" : "payload",
 	"config" : {
-		"priority" : 1,
 		"command" : "001",
 		"parameters" : "0110",
 		"arguments" : "@arg0",
@@ -174,7 +171,7 @@ If \texttt{type} is \texttt{payload}, this message will be sent through the USB 
 		}
 	}
 ]
-}			
+}
 \end{lstlisting}
 
 \subsection*{C translation}
@@ -194,21 +191,21 @@ typedef enum MCSCommand {
     
 } MCSCommand;
 
-const static struct MCSCommandOptionsMessage mcs_command_message_list[] =
+static const struct MCSCommandOptionsMessage mcs_command_message_list[] =
 {
     
 };
 
 #define mcs_command_message_list_size 
 
-const static struct MCSCommandOptionsState mcs_command_state_list[] =
+static const struct MCSCommandOptionsState mcs_command_state_list[] =
 {
     
 };
 
 #define mcs_command_state_list_size 
 
-const static struct MCSCommandOptionsPayload mcs_command_payload_list[] =
+static const struct MCSCommandOptionsPayload mcs_command_payload_list[] =
 {
     
 };
@@ -242,14 +239,13 @@ struct MCSCommandOptionsStatePerms {
 
 struct MCSCommandOptionsState {
     struct MCSCommandOptionsCommon cmd;
-    void *(*request)(MCSPacket *);
+    void *(*request)(const MCSPacket *);
     unsigned int dimensions;
     struct MCSCommandOptionsStatePerms expire_group[SDB_GROUP_MAX];
 };
 
 struct MCSCommandOptionsPayload {
     struct MCSCommandOptionsCommon cmd;
-    unsigned int priority;
     const char *command;
     const char *parameters;
     const char *arguments;
@@ -280,7 +276,7 @@ typedef enum MCSCommand {
     MCS_PAYLOAD_ARDUINO_GET_PIN     = 131072, /* 0x20000 */
 } MCSCommand;
 
-const static struct MCSCommandOptionsMessage mcs_command_message_list[] =
+static const struct MCSCommandOptionsMessage mcs_command_message_list[] =
 {
     {
     .cmd = {
@@ -297,7 +293,7 @@ const static struct MCSCommandOptionsMessage mcs_command_message_list[] =
 
 #define mcs_command_message_list_size 1
 
-const static struct MCSCommandOptionsState mcs_command_state_list[] =
+static const struct MCSCommandOptionsState mcs_command_state_list[] =
 {
     {
     .cmd = {
@@ -316,7 +312,7 @@ const static struct MCSCommandOptionsState mcs_command_state_list[] =
 
 #define mcs_command_state_list_size 1
 
-const static struct MCSCommandOptionsPayload mcs_command_payload_list[] =
+static const struct MCSCommandOptionsPayload mcs_command_payload_list[] =
 {
     {
     .cmd = {
@@ -325,7 +321,6 @@ const static struct MCSCommandOptionsPayload mcs_command_payload_list[] =
         .raw_data = false,
         .response_size = 1,
     },
-    .priority = 1,
     .command = "001",
     .parameters = "0110",
     .arguments = "@0",
@@ -344,18 +339,38 @@ const static struct MCSCommandOptionsPayload mcs_command_payload_list[] =
 \subsection*{Commands}
 The commands derived from the specification in the configuration file that will be travelling through the SDB, will have the following format:
 
-If it does not have raw data:
+If it does not have raw data and no explicit destination:
 \begin{itemize}
 \item Command type (1 byte). For the actually defined types: \texttt{message} is type 0, \texttt{state} is type 1 and \texttt{payload} is type 2. Types 253, 254 and 255 are reserved.
 \item Command number (2 bytes)
 \item Arguments (\texttt{nargs} * 1 byte)
 \end{itemize}
 
-If it does have raw data:
+If it does have raw data and no explicit destination:
 \begin{itemize}
 \item Command type (1 byte)
 \item Command number (2 bytes)
 \item Arguments ((\texttt{nargs} - 1) * 1 byte)
+\item Raw data size (2 bytes)
+\item Raw data ((Raw data size) * 1 byte)
+\end{itemize}
+
+If it does not have raw data and does have explicit destination:
+\begin{itemize}
+\item Command type (1 byte). For the actually defined types: \texttt{message} is type 0, \texttt{state} is type 1 and \texttt{payload} is type 2. Types 253, 254 and 255 are reserved.
+\item Command number (2 bytes)
+\item Arguments (\texttt{nargs} * 1 byte)
+\item Destination string size (1 byte)
+\item Destination string ((Destination string size) * 1 byte)
+\end{itemize}
+
+If it does have raw data and does have explicit destination:
+\begin{itemize}
+\item Command type (1 byte)
+\item Command number (2 bytes)
+\item Arguments ((\texttt{nargs} - 1) * 1 byte)
+\item Destination string size (1 byte)
+\item Destination string ((Destination string size) * 1 byte)
 \item Raw data size (2 bytes)
 \item Raw data ((Raw data size) * 1 byte)
 \end{itemize}
