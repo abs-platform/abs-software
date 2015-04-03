@@ -1,7 +1,7 @@
 {
     "name" : "procman_start",
     "description" : "Start the Process Manager",
-    "nargs" : 0,
+    "nargs" : 1,
     "raw_data" : false,
     "type" : "message",
     "config" : {
