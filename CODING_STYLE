@@ -22,30 +22,6 @@ to embed code in DIN-A4 documents.
 
 3. Whitespace
 --------------------------------------------------------------------------------
-<<<<<<< HEAD
- - Indents are four spaces. Tabs are forbidden for identation purposes unless 
-   they are a language or syntax request (e.g. Makefiles).
- - Separate parameters in functions with one space:
-        function(param1, param2, param3);
- - Opeands and operators must be separated with (at least) one space at each 
-   side of the operation:
-        b = a + 1;
- - Extra spaces can be optionally added to improve readability when several 
-   operations can be aligned together. In this situation, the alignment should
-   be ideally done with the equal (=) symbol:
-        b    = a + 1;
-        c_2  = b * 4;
-        c_2 *= a;
-<<<< Options:
-------------- Marc:
- - Put spaces between conditional statements and the first parentheses:
-        while (x > 0)
-------------- Carles:
->>>>
- - Do not leave whitespace dangling off the ends of lines.
- - Leave one empty line between logical groups of instructions.
- - Leave one empty line between functions.
-=======
  1. Indents are four spaces. Tabs are forbidden for identation purposes unless 
     they are a language or syntax request (e.g. Makefiles).
  2. Separate parameters in functions with one space:
@@ -73,58 +49,10 @@ to embed code in DIN-A4 documents.
  7. Leave one empty line between logical groups of instructions.
  8. Leave one empty line between functions.
  9. Leave (at least) one empty line at the end of a file.
->>>>>>> 178715d89d50f2160eae36fe8986fdc54eb19d88
 
 
 4. Block structure
 --------------------------------------------------------------------------------
-<<<<<<< HEAD
-<<<< Options:
-------------- Marc:
-Every indented statement is braced; even if the block contains just one
-statement. The opening brace is on the line that contains the control flow
-statement that introduces the new block; the closing brace is on the same line
-as the else keyword, or on a line by itself if there is no else keyword:
-
-    if (a == 5) {
-        printf("a was 5.\n");
-    } else if (a == 6) {
-        printf("a was 6.\n");
-    } else {
-        printf("a was something else entirely.\n");
-    }
-
-An exception is the opening brace for a function. It comes on a line by itself:
-
-    void a_function(void)
-    {
-        do_something();
-    }
-------------- Carles:
- - Braced blocks of code must be properly indented.
- - Flow control statements must not contain spaces between the name and 
-   conditions/arguments.
-        if(condition)   /* Correct. */
-        if (condition)  /* Wrong.   */
- - Opening braces should be written in a first new line right after the flow 
-   control statement, and must be indented at the same height. Intermediate 
-   statements and their braces (such as "else") have to be placed in a *single* 
-   new line. Their braces must be separated by one space from the statement.
-   Example:
-        if(condition1)          /* No space after "if". */ 
-        {                       /* Single new line. */
-            do_something();
-        } else if(condition2) { /* Spaces only before/after closing/opening */
-            do_something();     /* braces.                                  */
-        } else {
-            do_something();
-        }
- - Blocks containing a single statement can skip the braces if and only if they 
-   fit in a single line, e.g.: 
-        if(condition) op = 42;
-   The purpose of this rule is only to shrink the LOC number and should never 
-   worsen readability. Nesting is not allowed without braces:
-=======
  1. Braced blocks of code must be properly indented.
  2. Every indented statement is braced; even if the block contains just one
     statement. 
@@ -137,7 +65,6 @@ An exception is the opening brace for a function. It comes on a line by itself:
         if(condition) op = 42;
     The purpose of this rule is only to shrink the SLOC number and should 
     *never* worsen readability. Nesting is not allowed without braces:
->>>>>>> 178715d89d50f2160eae36fe8986fdc54eb19d88
         for(int i = 0; i < N; i++)          /*          */
             for(int j = 0; j < N; j++)      /* Wrong.   */
                 for(int k = 0; k < N; k++)  /*          */
@@ -152,9 +79,6 @@ An exception is the opening brace for a function. It comes on a line by itself:
                 for(int i = 0; i < N; i++) single_line();   /* Correct. */
             }
         }
-<<<<<<< HEAD
->>>>
-=======
  5. For flow control statements (if, while, for, switch):
      a. The opening brace must be in the same line that contains the flow 
         control statement and must be preceeded by a space; 
@@ -200,26 +124,10 @@ An exception is the opening brace for a function. It comes on a line by itself:
                 printf("Var is not 1, 2, 3 or 4\n");
                 break;
         }
->>>>>>> 178715d89d50f2160eae36fe8986fdc54eb19d88
 
 
 5. Naming
 --------------------------------------------------------------------------------
-<<<<<<< HEAD
- - Variables and functions are lower_case_with_underscores; easy to type and
-   read.
- - Structured and enum type names are in CamelCase; harder to type but standing
-   out.
- - Scalar type names are lower_case_with_underscores_ending_with_a_t, like the
-   POSIX uint64_t and similar families.
- - Constants are UPPER_CASE_WITH_UNDERSCORES; to stand out.
- - Global symbols include the domain of which they are part:
-        syscore_init_start
-        syscore_init_clean
-        syscore_power_flag
- - When wrapping standard library functions, use the prefix abs_ to alert
-   readers that they are seeing a wrapped version; otherwise avoid this prefix:
-=======
  1. Names have to be lexically sufficient and must never induce to a wrong 
     understanding of the value/functionality. 
  2. The use of common words such as "aux", "error", "device", "my_function"... 
@@ -241,22 +149,11 @@ An exception is the opening brace for a function. It comes on a line by itself:
         syscore_power_flag
 10. When wrapping standard library functions, use the prefix abs_ to alert
     readers that they are seeing a wrapped version; otherwise avoid this prefix:
->>>>>>> 178715d89d50f2160eae36fe8986fdc54eb19d88
         abs_malloc
 
 
 6. Declarations
 --------------------------------------------------------------------------------
-<<<<<<< HEAD
- - Mixed declarations (i.e. interleaving statements and declarations within 
-   blocks) are not allowed; declarations should be at the beginning of blocks. 
-   In other words, the code should not generate warnings if using GCC's
-   -Wdeclaration-after-statement option.
- - Global variables initialization should be ideally performed within the body 
-   of the entry point (main) or an initialization handler. Avoid initializing a
-   global variable outside a function scope and at several source files. Try to 
-   use constants instead of hardcoded expressions when possible. 
-=======
  1. Mixed declarations (i.e. interleaving statements and declarations within 
     blocks) are not allowed; declarations should be at the beginning of blocks. 
     In other words, the code should not generate warnings if using GCC's
@@ -265,24 +162,15 @@ An exception is the opening brace for a function. It comes on a line by itself:
     of the entry point (main) or an initialization handler. Avoid initializing a
     global variable outside a function scope and at several source files. Try to 
     use constants instead of hardcoded expressions when possible. 
->>>>>>> 178715d89d50f2160eae36fe8986fdc54eb19d88
 
 
 7. Static and Extern
 --------------------------------------------------------------------------------
-<<<<<<< HEAD
- - All data global for one file, and all auxiliar functions to that file must
-   have the static keyword. Do not make global what it is not necessary.
- - Global functions and variables must be declared in the header file using the 
-   "extern" modificatior. Their definition must be coded in the source files 
-   where they are used (except functions). Example:
-=======
  1. All data global for one file, and all auxiliar functions to that file must
     have the static keyword. Do not make global what it is not necessary.
  2. Global functions and variables must be declared in the header file using the 
     "extern" modificatior. Their definition must be coded in the source files 
     where they are used (except functions). Example:
->>>>>>> 178715d89d50f2160eae36fe8986fdc54eb19d88
         /* ---- example.h: -----*/
         extern int example_global;
         extern char state_global;
@@ -305,16 +193,6 @@ An exception is the opening brace for a function. It comes on a line by itself:
         
 8. Headers
 --------------------------------------------------------------------------------
-<<<<<<< HEAD
- - Each source file must have one single header file. Their names must match 
-   (except in the extension) and the header file should include all libraries
-   and external headers. The source file should contain only one #include 
-   directive.
- - Header files must contain all constants, macros, type definitions, and global
-   function prototypes and variables. 
- - Header files must have a conditional compilation with a descriptive name 
-   given its domain and file name, and finish with a _H:
-=======
  1. Each source file must have one single header file. Their names must match 
     (except in the extension) and the header file should include all libraries
     and external headers. The source file should contain only one #include 
@@ -323,77 +201,28 @@ An exception is the opening brace for a function. It comes on a line by itself:
     global function prototypes and variables. 
  3. Header files must have a conditional compilation with a descriptive name 
     given its domain and file name, and finish with a _H:
->>>>>>> 178715d89d50f2160eae36fe8986fdc54eb19d88
         #ifndef APPMOD_H
         #define APPMOD_H
         ...
         #endif
-<<<<<<< HEAD
- - Only include what is needed. Avoid including what it is not needed (i.e. 
-   unused libraries, old headers...)
- - C/C++ macros and complex constants (i.e. those which are calculated at 
-   compile-time) are there to save time, reduce lines of code, improve 
-   readability and mitigate typo-like errors. Use them with care, though, and 
-   don't forget to wrap complex expressions with parentheses. Example:
-=======
  4. Only include what is needed. Avoid including what it is not needed (i.e. 
     unused libraries, old headers...)
  5. C/C++ macros and complex constants (i.e. those which are calculated at 
     compile-time) are there to save time, reduce lines of code, improve 
     readability and mitigate typo-like errors. Use them with care, though, and 
     don't forget to wrap complex expressions with parentheses. Example:
->>>>>>> 178715d89d50f2160eae36fe8986fdc54eb19d88
         #define A   3
         #define B   4
         /* ---- case 1: */
         #define C   A + B 
-<<<<<<< HEAD
-        #define D   A * C /* The result will be 13. */
-        /* ---- case 2: */
-        #define C   (A + B) 
-        #define D   A * C /* The result will be 21. */
-=======
         #define D   A * C   /* The result will be 13. */
         /* ---- case 2: */
         #define C   (A + B) 
         #define D   (A * C) /* The result will be 21. */
->>>>>>> 178715d89d50f2160eae36fe8986fdc54eb19d88
         
 
 9. Comments and in-code documentation
 --------------------------------------------------------------------------------
-<<<<<<< HEAD
- - Use in-code comments rationally. There's no need to comment each and every 
-   line but it is very important to comment on decisions made, obscure hacks or 
-   other parts which might be difficult to understand.
- - Always surround the comments with /* */. Do not use other methods such as //.
- - Comments are English sentences: although short and clear, they must be 
-   grammatically correct. Do use punctuation (commas, full stops, parentheses 
-   and hyphens) and a proper language (e.g. avoid slang words, use technical 
-   expressions).
-<<<< Options:
-------------- Carles:
- - Functions and files must be documented according to the Doxygen 
-   specifications. (TODO: complete/discuss with the rest of the team).
->>>>
-
-10. Git repository (are they "code style rules"?)
---------------------------------------------------------------------------------
- - TODO
-
- 
-11. Reliability, debug easiness and flexibility
---------------------------------------------------------------------------------
- - Based on Holzmann's "The Power of Ten: Rules for Developing Safety Critical 
-   Code", NASA/JPL Laboratory for Reliable Software, available at
-   <http://spinroot.com/gerard/pdf/P10.pdf>, the following rules should be 
-   applied to the software developed for ABS. Their rationale is detailed in the 
-   aforementioned paper. (TODO, modify/remove some of these rules if necessary)
-        1.  Restrict all code to very simple control flow constructs –do not use 
-            goto statements, setjmp or longjmp constructs, and direct or 
-            indirect recursion.
-        2.  All loops must have a fixed upper-bound. It must be trivially
-=======
  1. Use in-code comments rationally. There's no need to comment each and every 
     line but it is very important to comment on decisions made, obscure hacks or 
     other parts which might be difficult to understand.
@@ -437,19 +266,10 @@ An exception is the opening brace for a function. It comes on a line by itself:
                     return error;
                 }
        ii.  All loops must have a fixed upper-bound. It must be trivially
->>>>>>> 178715d89d50f2160eae36fe8986fdc54eb19d88
             possible for a checking tool to prove statically that a preset 
             upper-bound on the number of iterations of a loop cannot be 
             exceeded. If the loop-bound cannot be proven statically, the rule is 
             considered violated.
-<<<<<<< HEAD
-        3.  Do not use dynamic memory allocation after initialization.
-        4.  No function should be longer than what can be printed on a single 
-            sheet of paper in a standard reference format with one line per 
-            statement and one line per declaration. Typically, this means no 
-            more than about 60 lines of code per function.
-        5.  The assertion density of the code should average to a minimum of two 
-=======
       iii.  Reduce the number of dynamic allocations to the minimum possible. If
             the size of memory blocks can be predicted (at compile time), it is
             compulsory to declare the memory region size statically.
@@ -462,7 +282,6 @@ An exception is the opening brace for a function. It comes on a line by itself:
             statement and one line per declaration. Typically, this means no 
             more than about 100 lines of code per function.
         v.  The assertion density of the code should average to a minimum of two 
->>>>>>> 178715d89d50f2160eae36fe8986fdc54eb19d88
             assertions per function. Assertions are used to check for anomalous 
             conditions that should never happen in real-life executions. 
             Assertions must always be side-effect free and should be defined as 
@@ -479,11 +298,7 @@ An exception is the opening brace for a function. It comes on a line by itself:
                 }
             with the assertion defined as follows:
                 #define c_assert(e) ((e) ? (true) : \
-<<<<<<< HEAD
-                    tst_debugging(”%s,%d: assertion ’%s’ failed\n”, \
-=======
                     tst_debugging("%s,%d: assertion '%s' failed\n", \
->>>>>>> 178715d89d50f2160eae36fe8986fdc54eb19d88
                     __FILE__, __LINE__, #e), false)
             In this definition, __FILE__ and __LINE__ are predefined by the 
             macro preprocessor to produce the filename and line-number of the 
@@ -494,29 +309,6 @@ An exception is the opening brace for a function. It comes on a line by itself:
             tst_debugging is turned into a no-op, and  the assertion turns into 
             a pure Boolean test that enables error recovery from anomolous 
             behavior.
-<<<<<<< HEAD
-        6.  Data objects must be declared at the smallest possible level of 
-            scope.
-        7.  The return value of non-void functions must be checked by each 
-            calling function, and the validity of parameters must be checked 
-            inside each function.
-        8.  The use of the preprocessor must be limited to the inclusion of 
-            header files and simple macro definitions. Token pasting, variable 
-            argument lists (ellipses), and recursive macro calls are not 
-            allowed. All macros must expand into complete syntactic units. The 
-            use of conditional compilation directives is often also dubious, but 
-            cannot always be avoided. This means that there should rarely be 
-            justification for more than one or two conditional compilation 
-            directives even in large software development efforts, beyond the 
-            standard boilerplate that avoids multiple inclusion of the same 
-            header file. Each such use should be flagged by a tool-based checker 
-            and justified in the code.
-        9.  The use of pointers should be restricted. Specifically, no more than 
-            one level of dereferencing is allowed. Pointer dereference 
-            operations may not be hidden in macro definitions or inside typedef 
-            declarations. Function pointers are not permitted.
-        10. All code must be compiled, from the first day of development, with 
-=======
        vi.  The return value of non-void functions must be checked by each 
             calling function, and the validity of parameters must be checked 
             inside each function.
@@ -526,7 +318,6 @@ An exception is the opening brace for a function. It comes on a line by itself:
             declarations. Function pointers are only permitted when the have a
             direct and clear justification.
      viii.  All code must be compiled, from the first day of development, with 
->>>>>>> 178715d89d50f2160eae36fe8986fdc54eb19d88
             all compiler warnings enabled at the compiler’s most pedantic 
             setting. All code must compile with these setting without any 
             warnings. All code must be checked daily with at least one, but 
@@ -537,20 +328,12 @@ An exception is the opening brace for a function. It comes on a line by itself:
 
 12. Final remarks
 --------------------------------------------------------------------------------
-<<<<<<< HEAD
- - Any code modifications accepted into the master tree must be compliant with 
-   these sets of rules and must compile without warnings using the -Wall option.
- - New code must be provided together with a Makefile. Including README 
-   temporary files within certain folders is allowed (and recommended) to save 
-   time (and headaches) to the rest of the team.
-=======
  1. Any code modifications accepted into the master tree must be compliant with 
     these sets of rules and must compile without warnings using the -Wall 
     option.
  2. New code must be provided together with a Makefile. Including README 
     temporary files within certain folders is allowed (and recommended) to save 
     time (and headaches) to the rest of the team.
->>>>>>> 178715d89d50f2160eae36fe8986fdc54eb19d88
    
 
 
