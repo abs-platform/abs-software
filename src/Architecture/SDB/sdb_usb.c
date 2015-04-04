@@ -41,7 +41,7 @@ void *usb_thread(void *arg)
                 response = mcs_err_packet(EHWFAULT);
                 break;
         }
-        write_mcs_packet_module(response, element->id_process);
+        sdb_module_write_mcs_packet(response, element->id_process, SDB_USB_ID);
         free(buffer);
     }
 }

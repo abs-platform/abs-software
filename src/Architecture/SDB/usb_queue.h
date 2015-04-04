@@ -12,7 +12,7 @@
 #define USB_QUEUE_SIZE 128
 
 typedef struct QueueElement { 
-    void * data; 
+    MCSPacket * data; 
     int id_process; 
     int priority;
 } QueueElement;
