@@ -1,0 +1,57 @@
+\documentclass[12pt,a4paper]{report}
+
+\usepackage[a4paper]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{parskip}
+\usepackage{graphicx}
+
+
+\definecolor{light-gray}{gray}{0.8}
+
+\lstset{backgroundcolor=\color{light-gray}, language=bash, basicstyle=\ttfamily\scriptsize, tabsize=2, showstringspaces=false}
+
+\begin{document}
+
+\section*{Arduino Firmware}
+
+\subsection*{Introduction}
+
+One of the main parts of the ABS project is the Arduino subsystem. This part is in charge of the communication between the phone and the different payloads, where the Arduino platform acts as an interface Payloads-Phone.
+
+The idea is to be able to control the Arduino (and therefore the attached Payloads) directly from the phone without writing code from the Arduino. Instead, a very generic firmware interprets and executes the commands sent by the phone.
+
+In the next few lines I will like to explain how the firmware works and the protocol we came up with to communicate the phone and the Arduino via USB.
+
+\subsection*{Protocol}
+
+The protocol aims to be as versatile and generic as possible. With the same packet structure one can start an i2c communication, read the value from a digital pin or even create an event to read a specific pin every n milliseconds.
+
+The basic structure for the USB packets is shown below:
+
+\includegraphics[scale=0.5]{packet_basic}
+
+\begin{itemize}
+\item \texttt{CMD (3 bits)}: Type of command (000: Control, 001: Basic Input/Output, 010: Serial Communications, 011: PWM, 100: Events).
+
+\item \texttt{Parameters (4 bits)}: Vary according to the type of command (e.g basic I/O: analog write, digital write, analog read, digital read).
+
+\item \texttt{CMD Args (7 bits)}: Vary according to the command (e.g in the case of digital read the only argument will be the number of the pin).
+
+\item \texttt{Data Size (7 bits)}: Size in bytes of data (max 128 bytes).
+
+\item \texttt{Data ( depends on the data size)}: The data depends on the command (e.g. in a serial communication it will contain the data to send).
+
+\item \texttt{Packet ID (7 bits)}: Packet identifier.
+
+\end{itemize}
+
+\subsection*{Firmware}
+The Arduino firmware waits for commands on the USB port. After receiving a command (USB packet), the firmware starts processing it. The way it does that is sending the packet received to the function execute\_packet(char *packet).
+
+A workflow diagram of the function is shown below
+
+Two ino files: 1 main, function to interpret the command.
+
+\end{document}
