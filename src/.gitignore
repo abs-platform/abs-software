@@ -1,0 +1,8 @@
+# Ignore compiled libraries
+*.so
+
+# Ignore executables
+*.x
+
+# Ignore auto generated files
+auto_*
