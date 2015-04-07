@@ -140,14 +140,12 @@ to embed code in DIN-A4 documents.
  5. In Java: methods and class names are in CamelCase.
  6. Structured and enum type names are in CamelCase; harder to type but standing
     out.
- 7. Scalar type names are lower_case_with_underscores_ending_with_a_t, like the
-    POSIX uint64_t and similar families.
- 8. Constants are UPPER_CASE_WITH_UNDERSCORES; to stand out.
- 9. Global symbols include the domain of which they are part:
+ 7. Constants are UPPER_CASE_WITH_UNDERSCORES; to stand out.
+ 8. Global symbols include the domain of which they are part:
         syscore_init_start
         syscore_init_clean
         syscore_power_flag
-10. When wrapping standard library functions, use the prefix abs_ to alert
+ 9. When wrapping standard library functions, use the prefix abs_ to alert
     readers that they are seeing a wrapped version; otherwise avoid this prefix:
         abs_malloc
 
@@ -161,7 +159,20 @@ to embed code in DIN-A4 documents.
  2. Global variables initialization should be ideally performed within the body 
     of the entry point (main) or an initialization handler. Avoid initializing a
     global variable outside a function scope and at several source files. Try to 
-    use constants instead of hardcoded expressions when possible. 
+    use constants instead of hardcoded expressions when possible.
+ 3. In C, new types must always be defined in the *global* namespace. Moreover, 
+    for coherency and uniformity, structs must be written using the name at the 
+    beginning AND at the end. Example:
+        typedef struct S { int x; } S;  /* Correct. Preferrable option.       */
+        typedef struct S { int x; };    /* Wrong.                             */
+        typedef struct { int x; } S;    /* Wrong.                             */
+        struct S { int x; };            /* Wrong, unless used with the next 
+                                           line.                              */
+        typedef struct S S;             /* Requires `struct S` to be defined. */
+        /* The use of the symbol 'S' is therefore restricted anywhere else in 
+           this program. */
+         
+        
 
 
 7. Static and Extern
