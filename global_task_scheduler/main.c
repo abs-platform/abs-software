@@ -3,6 +3,7 @@
 #include <time.h>
 #include <libgen.h>
 #include <sys/time.h>
+#include "library.h"
 
 /* It computes the total amount of occurrences of all tasks.
  * If the given current solution doesn't include each task at least once,
@@ -102,90 +103,9 @@ void copy_solution(int *solution, int *final_solution, int sats) {
     }
 }
 
-/*It generates an empty array of a certain length*/
-int generate_array(int length, int **p_array) {
-    int *array;
-
-    *p_array = malloc(length * sizeof (int));
-    array = *p_array;
-    if (array == NULL) {
-        fprintf(stderr, "out of memory\n");
-        return (-1);
-    } else return (0);
-}
-
-/*It generates an empty 2D matrix (of floats) of certain dimensions*/
-int generate_2D_matrix_float(int rows, int cols, float ***p_matrix) {
-    float **matrix;
-    int j;
-    *p_matrix = malloc(rows * sizeof (float *));
-    matrix = *p_matrix;
-    if (matrix == NULL) {
-        fprintf(stderr, "out of memory\n");
-        return (-1);
-    }
-    for (j = 0; j < rows; j++) {
-        matrix[j] = malloc(cols * sizeof (float));
-        if (matrix[j] == NULL) {
-            fprintf(stderr, "out of memory\n");
-            return (-1);
-        }
-    }
-    return (0);
-}
-
-/*It generates an empty 2D matrix (of integers) of certain dimensions*/
-int generate_2D_matrix_int(int rows, int cols, int ***p_matrix) {
-    int **matrix;
-    int j;
-
-    *p_matrix = malloc(rows * sizeof (int *));
-    matrix = *p_matrix;
-    if (matrix == NULL) {
-        fprintf(stderr, "out of memory\n");
-        return (-1);
-    }
-    for (j = 0; j < rows; j++) {
-        matrix[j] = malloc(cols * sizeof (int));
-        if (matrix[j] == NULL) {
-            fprintf(stderr, "out of memory\n");
-            return (-1);
-        }
-    }
-    return (0);
-}
-
-/*It generates an empty 3D matrix of certain dimensions*/
-int generate_3D_matrix(int rows, int cols, int pages, int ****p_matrix) {
-    int i, j;
-    int ***matrix;
-
-    *p_matrix = malloc(pages * sizeof (int**));
-    matrix = *p_matrix;
-    if (matrix == NULL) {
-        fprintf(stderr, "out of memory\n");
-        return (-1);
-    }
-    for (i = 0; i < pages; i++) {
-        matrix[i] = malloc(rows * sizeof (int*));
-        if (matrix[i] == NULL) {
-            fprintf(stderr, "out of memory\n");
-            return (-1);
-        }
-    }
-    for (i = 0; i < pages; i++) {
-        for (j = 0; j < rows; j++) {
-            matrix[i][j] = malloc(cols * sizeof (int));
-            if (matrix[i][j] == NULL) {
-                fprintf(stderr, "out of memory\n");
-                return (-1);
-            }
-        }
-    }
-    return (0);
-}
-
-int generate_F(int *golden_index, int golden_index_max, int sats, float ***p_F) {
+/*Randomly generates the figure of merit matrix*/
+int generate_F(int *golden_index, int golden_index_max, int sats,
+        float ***p_F) {
     int j, k;
     float **F;
 
@@ -201,7 +121,9 @@ int generate_F(int *golden_index, int golden_index_max, int sats, float ***p_F) 
     return 0;
 }
 
-int generate_golden_index(int golden_index_max, int sats, int **p_golden_index) {
+/*Randomly generates the golden index array*/
+int generate_golden_index(int golden_index_max, int sats,
+        int **p_golden_index) {
     int k;
     int *golden_index;
 
@@ -214,6 +136,7 @@ int generate_golden_index(int golden_index_max, int sats, int **p_golden_index) 
     return 0;
 }
 
+/*Randomly generates the t 3D matrix*/
 int generate_t(int tasks, int golden_index_max, int *golden_index,
         int sats, int ****p_t) {
     int n_ones, a, task_exist, n = 5;
@@ -231,7 +154,8 @@ int generate_t(int tasks, int golden_index_max, int *golden_index,
             }
         }
     }
-
+    /*Fills the 3D matrix with ones. To avoid having a lot of ones, every time a
+     one is put, the probability of putting a new one decreases a 5%*/
     for (k = 0; k < sats; k++) {
         for (j = 0; j < golden_index[k]; j++) {
             n_ones = (rand() % tasks) + 1;
@@ -241,20 +165,22 @@ int generate_t(int tasks, int golden_index_max, int *golden_index,
                 if (t[i][j][k] == 1) continue;
                 else {
                     t[i][j][k] = 1;
-                    if (rand() % 100 < n){
+                    if (rand() % 100 < n) {
                         n += 5;
                         break;
                     }
                     a++;
                 }
             }
+            n = 5;
         }
     }
-    
-    for (i = 0; i < tasks; i++){
+    /*In some cases, some tasks may not contain any one. In this case, it is 
+     forced that this task contains at least one.*/
+    for (i = 0; i < tasks; i++) {
         task_exist = 0;
-        for (k = 0; k < sats; k++){
-            for (j = 0; j < golden_index[k]; j++){
+        for (k = 0; k < sats; k++) {
+            for (j = 0; j < golden_index[k]; j++) {
                 if (t[i][j][k] != 0) {
                     task_exist = 1;
                     break;
@@ -262,88 +188,16 @@ int generate_t(int tasks, int golden_index_max, int *golden_index,
             }
             if (task_exist) break;
         }
-     if (!task_exist) 
-     {
-       k = rand() % sats;  
-       j = rand() % golden_index[k];
-       t[i][j][k] = 1;
-     }
+        if (!task_exist) {
+            k = rand() % sats;
+            j = rand() % golden_index[k];
+            t[i][j][k] = 1;
+        }
     }
     return (0);
 }
 
-void print_array(char *label, int *array, int length) {
-    int i;
-    printf("%s: ", label);
-    for (i = 0; i < length; i++) {
-        printf("%d ", array[i]);
-    }
-    printf("\n");
-}
-
-void print_2D_array_int(char *label, int **array, int rows, int cols) {
-    int i, j;
-    printf("%s:\n", label);
-    for (i = 0; i < rows; i++) {
-        for (j = 0; j < cols; j++) {
-            printf("%d ", array[i][j]);
-        }
-        printf("\n");
-    }
-    printf("\n");
-}
-
-void print_2D_array_float(char *label, float **array, int rows, int cols) {
-    int i, j;
-    printf("%s:\n", label);
-    for (i = 0; i < rows; i++) {
-        for (j = 0; j < cols; j++) {
-            printf("%.1f ", array[i][j]);
-        }
-        printf("\n");
-    }
-    printf("\n");
-}
-
-void print_3D_array(char *label, int ***array, int pages, int rows, int cols) {
-    int i, j, k;
-    printf("%s:\n", label);
-    for (i = 0; i < pages; i++) {
-        for (j = 0; j < rows; j++) {
-            for (k = 0; k < cols; k++) {
-                printf("%d ", array[i][j][k]);
-            }
-            printf("\n");
-        }
-        printf("\n");
-    }
-    printf("\n");
-}
-
-void free_2D_matrix(int rows, void **matrix) {
-    int j;
-
-    for (j = 0; j < rows; j++) {
-        free(matrix[j]);
-    }
-    free(matrix);
-}
-
-void free_3D_matrix(int pages, int rows, int ***matrix) {
-    int i, j;
-
-    for (i = 0; i < pages; i++) {
-        for (j = 0; j < rows; j++) {
-            free(matrix[i][j]);
-        }
-    }
-    for (i = 0; i < pages; i++) {
-        free(matrix[i]);
-    }
-    free(matrix);
-
-}
-
+/*It compares if two arrays are equal. If they are, it returns 1, otherwise 0.*/
 int compare_solutions(int *solution1, int *solution2, int tasks) {
     int i;
 
@@ -356,8 +210,8 @@ int compare_solutions(int *solution1, int *solution2, int tasks) {
 }
 
 /* If a solution appears only in one solution of one satellite, the final 
- * solution must use this solution to avoid reaching to an incompatibility.*/
-void set_solutions(int tasks, int *golden_index, int sats, int ***t, 
+ * solution must use this solution to avoid reaching an incompatibility.*/
+void set_solutions(int tasks, int *golden_index, int sats, int ***t,
         int *fixed_solution) {
     int r, a, b, i, j, k;
     for (i = 0; i < tasks; i++) {
@@ -372,12 +226,14 @@ void set_solutions(int tasks, int *golden_index, int sats, int ***t,
                 }
             }
         }
-        if (r == 1){
+        if (r == 1) {
             fixed_solution[b] = a + 1;
         }
     }
 }
 
+/*If there are two equal solutions with different figure of merit, only the 
+ one with the highest figure of merit is kept.*/
 void delete_duplicates(int sol, int sat, int tasks, int *golden_index, int sats,
         int ***t, float **F, int *fixed_solution) {
     int i, j, k, l;
@@ -406,7 +262,6 @@ void delete_duplicates(int sol, int sat, int tasks, int *golden_index, int sats,
                 }
                 sol1[i] = t[i][sol][sat];
                 sol2[i] = t[i][j][k];
-
             }
             equals = compare_solutions(sol1, sol2, tasks);
             if (equals) {
@@ -418,7 +273,7 @@ void delete_duplicates(int sol, int sat, int tasks, int *golden_index, int sats,
                     F[j][k] = 0;
                     set_solutions(tasks, golden_index, sats, t, fixed_solution);
                     if (fixed_solution[k] != 0) break;
-                      
+
                 } else {
                     for (i = 0; i < tasks; i++) {
                         t[i][sol][sat] = 0;
@@ -437,8 +292,10 @@ void delete_duplicates(int sol, int sat, int tasks, int *golden_index, int sats,
     free(sol2);
 }
 
-int check_solution(int sats, float **F, int *solution, 
-        int *fixed_solution, float *duplicates, float *mandatories ) {
+/*Checks if the current solution can be possible (return 1) or it doesn't
+ accomplish some condition*/
+int check_solution(int sats, float **F, int *solution,
+        int *fixed_solution, float *duplicates, float *mandatories) {
     int k;
     for (k = 0; k < sats; k++) {
         if (solution[k] == 0) continue;
@@ -447,29 +304,31 @@ int check_solution(int sats, float **F, int *solution,
             return (0);
         }
         if (fixed_solution[k] == 0) continue;
-        if (solution[k] != fixed_solution [k]){
+        if (solution[k] != fixed_solution [k]) {
             (*mandatories)++;
-            return(0);
+            return (0);
         }
-    }   
-return (1);   
-} 
+    }
+    return (1);
+}
 
+/*It solves the problem. If we are deleteting duplicates, it checks that the
+ solution is valid.*/
 void solve(int tasks, int golden_index_max, int sats,
-        int *golden_index, float **F, int ***t, int **x, int *solution, 
+        int *golden_index, float **F, int ***t, int **x, int *solution,
         int *final_solution, int *fixed_solution, int brute_force,
         float *duplicates, float *mandatories, float *max) {
     int i = 0, valid = 1;
     long int combs;
     int n;
-    float r, num; 
+    float r, num;
 
     combs = number_of_combinations(golden_index, sats);
-     //  printf("Combinations: %ld\n", combs);
+    //  printf("Combinations: %ld\n", combs);
     for (i = 1; i < combs; i++) {
         next_solution(solution, sats, golden_index);
         if (!brute_force) {
-            valid = check_solution(sats, F, solution, 
+            valid = check_solution(sats, F, solution,
                     fixed_solution, duplicates, mandatories);
             if (!valid) continue;
         }
@@ -486,15 +345,16 @@ void solve(int tasks, int golden_index_max, int sats,
     //    printf("Max: %.2f\n", (*max));
 }
 
+/*Deletes duplicates before executing the algorithm.*/
 void solve_deleting_duplicates(int tasks, int golden_index_max, int sats,
-        int *golden_index, float **F, int ***t, int **x, int *solution, 
+        int *golden_index, float **F, int ***t, int **x, int *solution,
         int *final_solution, int *fixed_solution, float *duplicates,
         float *mandatories, float *max) {
     int j, k;
 
     for (k = 0; k < sats; k++) {
         for (j = 0; j < golden_index[k]; j++) {
-            delete_duplicates(j, k, tasks, golden_index, sats, t, F, 
+            delete_duplicates(j, k, tasks, golden_index, sats, t, F,
                     fixed_solution);
             if (fixed_solution[k] != 0) break;
         }
@@ -507,8 +367,9 @@ void solve_deleting_duplicates(int tasks, int golden_index_max, int sats,
 int main(int argc, char* argcv[]) {
 
     int tasks, golden_index_max, sats;
-    float combs, deleted_combs, bf_time, dd_time, time_difference, duplicates = 0, mandatories = 0; 
-    int error; 
+    float combs, deleted_combs, bf_time, dd_time, time_difference,
+            duplicates = 0, mandatories = 0;
+    int error;
     float bf_max = 0, dd_max = 0, optimality_lost;
     int *golden_index, *solution, *final_solution, *fixed_solution;
     int**x;
@@ -520,7 +381,8 @@ int main(int argc, char* argcv[]) {
     time_t start_time_s, final_time_s;
 
     if (argc != 4) {
-        fprintf(stderr, "Usage: %s tasks solutions satellites\n", basename(argcv[0]));
+        fprintf(stderr, "Usage: %s tasks solutions satellites\n",
+                basename(argcv[0]));
         return (1);
     } else {
         tasks = atoi(argcv[1]);
@@ -530,7 +392,7 @@ int main(int argc, char* argcv[]) {
     if (gettimeofday(&temps, &tz)) return (1);
     start_time_u = temps.tv_usec;
     srand(start_time_u); //The seed of the random number
-     error = generate_golden_index(golden_index_max, sats, &golden_index);
+    error = generate_golden_index(golden_index_max, sats, &golden_index);
     if (error == -1) return (error);
     error = generate_F(golden_index, golden_index_max, sats, &F);
     if (error == -1) return (error);
@@ -546,30 +408,31 @@ int main(int argc, char* argcv[]) {
     error = generate_golden_index(0, sats, &fixed_solution);
     if (error == -1) return (error);
     set_solutions(tasks, golden_index, sats, t, fixed_solution);
-  //  print_array("Fixed", fixed_solution, sats);
-   
-        if (gettimeofday(&temps, &tz)) return (1);
-        start_time_u = temps.tv_usec;
-        start_time_s = temps.tv_sec;
-     //   printf("Initial: %ld\n",start_time_s*1000000+start_time_u);
-        solve(tasks, golden_index_max, sats, golden_index, F, t, x, 
-                solution, final_solution, fixed_solution, 1, &duplicates, 
-                &mandatories, &bf_max);
-        if (gettimeofday(&temps, &tz)) return (1);
-        final_time_u = temps.tv_usec;
-        final_time_s = temps.tv_sec;
+    //  print_array("Fixed", fixed_solution, sats);
+
+    if (gettimeofday(&temps, &tz)) return (1);
+    start_time_u = temps.tv_usec;
+    start_time_s = temps.tv_sec;
+    //   printf("Initial: %ld\n",start_time_s*1000000+start_time_u);
+    solve(tasks, golden_index_max, sats, golden_index, F, t, x,
+            solution, final_solution, fixed_solution, 1, &duplicates,
+            &mandatories, &bf_max);
+    if (gettimeofday(&temps, &tz)) return (1);
+    final_time_u = temps.tv_usec;
+    final_time_s = temps.tv_sec;
     //    printf("Final: %ld\n",final_time_s*1000000+final_time_u);
     //    print_array ("Solution opt", final_solution, sats);
-        bf_time = (final_time_s - start_time_s)*1000000 + final_time_u - start_time_u;
+    bf_time = (final_time_s - start_time_s)*1000000 +
+            final_time_u - start_time_u;
     //    printf("%d %d %d %ld\n\n", tasks, golden_index_max, sats, bf_time);
-        free(final_solution);
-        free(solution);
-        error = generate_golden_index(0, sats, &solution);
-        if (error == -1) return (error);
-        error = generate_golden_index(0, sats, &final_solution);
-        if (error == -1) return (error);
-     
-      print_3D_array("t", t, tasks, golden_index_max, sats);
+    free(final_solution);
+    free(solution);
+    error = generate_golden_index(0, sats, &solution);
+    if (error == -1) return (error);
+    error = generate_golden_index(0, sats, &final_solution);
+    if (error == -1) return (error);
+
+    print_3D_array("t", t, tasks, golden_index_max, sats);
     //  print_2D_array_float ("F", F, golden_index_max, sats);
 
     if (gettimeofday(&temps, &tz)) return (1);
@@ -577,8 +440,8 @@ int main(int argc, char* argcv[]) {
     start_time_s = temps.tv_sec;
     //   printf("Initial: %ld\n",start_time_s*1000000+start_time_u);
     solve_deleting_duplicates(tasks, golden_index_max, sats,
-            golden_index, F, t, x, solution, final_solution, fixed_solution, &duplicates,
-            &mandatories, &dd_max);
+            golden_index, F, t, x, solution, final_solution, fixed_solution,
+            &duplicates, &mandatories, &dd_max);
     if (gettimeofday(&temps, &tz)) return (1);
     final_time_u = temps.tv_usec;
     final_time_s = temps.tv_sec;
@@ -587,15 +450,16 @@ int main(int argc, char* argcv[]) {
     //  printf("Final: %ld\n",final_time_s*1000000+final_time_u);
     //print_array("Solution", final_solution, sats);
     //printf("Duplicates: %.0f\nMandatories: %.0f\n", duplicates, mandatories);
-    dd_time = (final_time_s - start_time_s)*1000000 + final_time_u - start_time_u;
+    dd_time = (final_time_s - start_time_s)*1000000 + final_time_u -
+            start_time_u;
     //printf("bf_time: %.0f, dd_time: %.0f\n", bf_time, dd_time);
-    time_difference = bf_time/dd_time;
+    time_difference = bf_time / dd_time;
     combs = (float) number_of_combinations(golden_index, sats);
-    deleted_combs = ((duplicates + mandatories)/combs)*100;
+    deleted_combs = ((duplicates + mandatories) / combs)*100;
     //printf("deleted_combs: %.2f\n", deleted_combs);
-    optimality_lost = ((bf_max - dd_max)/bf_max) * 100;
-    printf("%d %d %d %.0f %.2f %.2f %.2f\n", tasks, golden_index_max, sats, dd_time, 
-            time_difference, deleted_combs, optimality_lost);
+    optimality_lost = ((bf_max - dd_max) / bf_max) * 100;
+    printf("%d %d %d %.0f %.2f %.2f %.2f\n", tasks, golden_index_max, sats,
+            dd_time, time_difference, deleted_combs, optimality_lost);
     free(golden_index);
     free(final_solution);
     free(solution);
@@ -605,28 +469,3 @@ int main(int argc, char* argcv[]) {
     free_3D_matrix(tasks, golden_index_max, t);
     return (0);
 }
-
-/*ASK: 
- * - Reward function's definition.
- * - Use of the parameter m in the algorithm.
- * - Same solution but different F --> Leave only the one with higher F? 
- */
-
-/*TODO:
- * + Randomize variables (Dynamically Allocating Multidimensional Arrays)
- * + Function that generates t[i][j][k], goldenIndex[j][k] and F[j][k] to test
- *   the algorithm in harder conditions (5 sats - 5 sub-solutions each ...)
- * 
- * + Variables int --> unsigned char (positive integer up to 256) NOT OPTIMIZED
- * + Free memory function
- * 
- * - Optimize algorithm
- * - Think how the local scheduler have to give the information. 
- */
-
-/*ERRORS:
- * + In some cases "t" is incorrectly generated. Changing pointer syntax
- *   there's sometimes a segmentation fault. SOLVED
- * + The program crashes if the number of solutions was greater than the 
- *   number of satellites. SOLVED
- */
