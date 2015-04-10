@@ -1,53 +1,21 @@
 #include <adk.h>
 #include <usbhub.h>
-#include "TimerOne.h"
+#include <TimerOne.h>
 #include <SoftwareSerial.h>
-
-#define MAX_SERIAL 2
-#define MAX_EVENTS 10
-
-#define IS_PIN_DIGITAL(p)       ((p) >= 2 && (p) <= 19)
-#define IS_PIN_ANALOG(p)        ((p) >= 14 && (p) < 14 + 10)
-#define IS_PIN_PWM(p)           digitalPinHasPWM(p)
-
-typedef enum {
-    BASIC_IO = 1,
-    COMMS = 2,
-    EVENT = 3
-} Format;
-
-typedef enum {
-    ANALOG_WRITE,
-    DIGITAL_WRITE,
-    ANALOG_READ,
-    DIGITAL_READ 
-} BasicIOAction;
-
-typedef enum {
-    INIT,
-    READ,
-    WRITE
-} SerialComm;
-
-struct Event {
-    int action;
-    int buffer;
-    int time;
-};
-
-uint8_t rc;
-byte command, mode;
-int pin = 0, num = 0, res = 0, i = 0, time = 0, eventCount = 0; 
-uint8_t msg[100] = { 0x00 };
-Event event_list[MAX_EVENTS];
-
-const int bitrate[] = {300, 1200, 2400, 4800, 9600, 14400, 19200, 28800, 38400, 57600,  115200};
+#include "abs.h"
 
 SoftwareSerial mySerial[MAX_SERIAL] = {SoftwareSerial(6,7), SoftwareSerial(7,8)};
 
+uint8_t msg[MAX_PACKET_SIZE];
+uint16_t length;
+USBPacket packet;
 USB Usb;
 USBHub hub0(&Usb);
 USBHub hub1(&Usb);
+Event event_list[MAX_EVENTS];
+int time=0, eventCount = 0, packetCount = 0; 
+USBPacket res;
+uint8_t *response;
 
 ADK adk(&Usb, "UPC, BarcelonaTech",
               "Android Beyond the Stratoshpere",
@@ -66,118 +34,48 @@ void setup(void)
         Serial.println("OSCOKIRQ failed to assert");
         while(Usb.Init() == -1); /* retry */
     }
-    Timer1.initialize(500000);
+    Timer1.initialize(5000000);
     Timer1.pwm(9, 512);
-    Timer1.attachInterrupt(events);
+    Timer1.attachInterrupt(events_routine);
 }
 
 void loop(void)
 {  
+    int i = 0;
     Usb.Task(); 
     if(!adk.isReady()) { 
         return; /* restart Arduino firmware */
     }
-    uint16_t length = sizeof(msg);
-    rc = adk.RcvData(&length, msg);
+    
+    length = sizeof(msg);
+    adk.RcvData(&length, msg);
     if(length > 0) {
         noInterrupts();
-        /* process packet */
-        command = (msg[0] >> 5) & 0x07;
-        switch(command) {
-            case BASIC_IO:
-                /* Command type: BASIC_IO */
-                mode = (msg[0] >> 3) & 0x03;
-                pin = (msg[1] >> 1) & 0xFF;
-                switch(mode) {    
-                    case ANALOG_WRITE:
-                        /* Analog Write */
-                        if(IS_PIN_ANALOG(pin)) { 
-                            pinMode(pin, OUTPUT);
-                            analogWrite(pin, (msg[0] << 5) & 0xC0);
-                        } else {
-                            /* return error */
-                        }
-                        break;
-                    case DIGITAL_WRITE:
-                        /* Digital Write */
-                        if(IS_PIN_DIGITAL(pin)) { 
-                            pinMode(pin, OUTPUT); 
-                            digitalWrite(pin, (msg[0] >> 2) & 0x01);
-                        } else {
-                            /* return error */
-                        }
-                        break;
-                    case ANALOG_READ:
-                        /* Analog Read */
-                        if(IS_PIN_ANALOG(pin)) { 
-                            res = analogRead(pin);
-                        } else {
-                            /* return error */
-                        }
-                        break;
-                    case DIGITAL_READ:
-                        /* Digital Read */
-                        if(IS_PIN_DIGITAL(pin)) { 
-                            pinMode(pin, INPUT);
-                            res = digitalRead(pin);
-                        } else {
-                            /* return error */
-                        }
-                        break;
-                }  
-                break;    
-            case COMMS:
-                /* Command type: Serial Comms */
-                mode = (msg[0] >> 3) & 0x03;
-                num = (msg[1] << 1) & 0xFF;
-                switch(mode) {
-                    case INIT:
-                        /* Serial setup */
-                        if(num <= MAX_SERIAL) {
-                            mySerial[num].begin(bitrate[(msg[0] << 1) & 0x07]);
-                        }
-                        break;
-                    case READ:
-                        /* Serial read */
-                        if(num <= MAX_SERIAL) {
-                            mySerial[num].read();
-                        }
-                        break;
-                    case WRITE:
-                        /* Serial write */
-                        if(num <= MAX_SERIAL) {
-                            mySerial[num].println(msg[2]);
-                        }
-                        break;
-                }
-                break;
-            case EVENT:
-                /* Command type: Events */
-                Serial.println("Events"); 
-                //TODO
-                event_list[eventCount].action = 1; 
-                event_list[eventCount].buffer = 1;
-                event_list[eventCount].time = (int)(msg[0] << 1) & 0x0F; 
-                eventCount++;
-                //TODO
-                break;
-            default:
-                Serial.println("Unknown");
-                break;
-        }
-        /* Send response packet */
+        packet = process_packet(msg);
+        res = execute_packet(&packet);
+        response = to_raw(res, &length); 
+        adk.SndData(length, response);    
         interrupts();
+    }
+    
+    for(i = 0; i < eventCount; i++) {
+        if(event_list[i].execute == 1) {
+           packet = event_list[i].action;
+           res = execute_packet(&packet);
+           save_event_data(i, res.data);
+           event_list[i].execute = 0;
+        }
     }
     delay(100);
 }
 
-void events(void)
+void events_routine(void)
 {  
     int i = 0;
     for(i = 0; i < eventCount; i++) {
-        if(time % event_list[i].time == 0) {
+      if(time % event_list[i].interval == 0) {
             Serial.println("Event num: "+String(i));
-            //TODO
+            event_list[i].execute = 1;
         }
     }
     time++;
