@@ -1,0 +1,15 @@
+{
+    "name" : "arduino_get_pin",
+    "description" : "Get the value of the given pin in the Arduino board",
+    "nargs" : 1,
+    "raw_data" : false,
+    "type" : "payload",
+    "config": {
+        "priority": 1,
+        "command": "001",
+        "parameters" : "0110",
+        "arguments" : "@arg0",
+        "data" : null,
+        "response_size" : 1
+    }
+}

@@ -1,4 +1,4 @@
-/*HERE BEGINS THE PRINTED FILE, commented for building p
+/*---------------------PRINTED FILE---------------------
 
 const static struct MCSCommandMessage mcs_command_message_list[] =
 {
