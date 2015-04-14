@@ -49,7 +49,7 @@ void dumpData(int buffer_id)
     temp.toCharArray(filename, sizeof(filename));
     File dataFile = SD.open(filename);
     if (dataFile) {
-        adk.SndData(1, (uint8_t *) dataFile.read());
+        adk.SndData(1, (uint8_t *)dataFile.read());
     }
     dataFile.close();
 }
@@ -123,7 +123,7 @@ USBPacket execute_packet(USBPacket *packet)
                 case ANALOG_READ:
                     if(IS_PIN_ANALOG(pin)) {
                         result = analogRead(pin);
-                        response = usb_ok_data_packet((char *) result, 1);
+                        response = usb_ok_data_packet((char *)result, 1);
                     } else {
                         response = usb_error_packet(1);
                     }
@@ -132,7 +132,7 @@ USBPacket execute_packet(USBPacket *packet)
                     if(IS_PIN_DIGITAL(pin)) {
                         pinMode(pin, INPUT);
                         result = digitalRead(pin);
-                        response = usb_ok_data_packet((char *) result, 1);
+                        response = usb_ok_data_packet((char *)result, 1);
                     } else {
                         response = usb_error_packet(1);
                     }

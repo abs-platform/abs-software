@@ -29,7 +29,7 @@ public class Arduino {
     public int digitalWrite(int pin, int value)
     {
         SDBPacket response = sdb.send(new SDBPacket(
-                SDBPacket.CMD.DIGITAL_WRITE,(byte)pin,(byte)value));
+                SDBPacket.CMD.DIGITAL_WRITE,(byte)pin, (byte)value));
 
         if(response.getCMD() == SDBPacket.CMD.OK) {
             return 1;
@@ -48,7 +48,7 @@ public class Arduino {
     public int digitalRead(int pin)
     {
         SDBPacket response = sdb.send(new SDBPacket(
-                SDBPacket.CMD.DIGITAL_READ,(byte)pin));
+                SDBPacket.CMD.DIGITAL_READ, (byte)pin));
 
         if(response.getCMD() == SDBPacket.CMD.OK_DATA) {
             return response.getParameter(0);
@@ -87,7 +87,7 @@ public class Arduino {
     public int analogRead(int pin)
     {
         SDBPacket response = sdb.send(new SDBPacket(
-                SDBPacket.CMD.ANALOG_READ,(byte)pin));
+                SDBPacket.CMD.ANALOG_READ, (byte)pin));
 
         if(response.getCMD() == SDBPacket.CMD.OK_DATA) {
             return response.getParameter(0);
