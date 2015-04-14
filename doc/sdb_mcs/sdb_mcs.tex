@@ -27,17 +27,10 @@ The specification for the MCS configuration file is the following:
 \begin{lstlisting}
 {
 "command_list" : [
-<<<<<<< HEAD
     command1,
     command2,
     ...
     commandN
-=======
-	command1,
-	command2,
-	...
-	commandN
->>>>>>> 5a175c411d56d857b15d038cf87e1e3a10ae47f3
 ]
 }
 \end{lstlisting}
@@ -67,17 +60,10 @@ The specification for the MCS configuration file is the following:
 If \texttt{type} is \texttt{messages}, this command is a simple message sent from one module of the SDB to another, and each one of them should be able to understand it. Field \texttt{config} is defined as:
 \begin{lstlisting}
 {
-<<<<<<< HEAD
     "destination" : "string",
     "origin_groups" : ["string", "string", ...],
     "destination_groups" : ["string", "string", ...],
     "response_size" : integer
-=======
-	"destination" : "string",
-	"origin_groups" : ["string", "string", ...],
-	"destination_groups" : ["string", "string", ...],
-	"response_size" : integer
->>>>>>> 5a175c411d56d857b15d038cf87e1e3a10ae47f3
 }
 \end{lstlisting}
 
@@ -98,17 +84,10 @@ If \texttt{type} is \texttt{state}, this command relates with a system state, su
     "unit" : "string",
     "dimension_name" : "string",
     "expire_group" : [
-<<<<<<< HEAD
             {"string" : integer},
             {"string" : integer},
             ...
             ]
-=======
-    		{"string" : integer},
-    		{"string" : integer},
-    		...
-    		]
->>>>>>> 5a175c411d56d857b15d038cf87e1e3a10ae47f3
 }
 \end{lstlisting}
 
@@ -129,21 +108,12 @@ If \texttt{type} is \texttt{state}, this command relates with a system state, su
 If \texttt{type} is \texttt{payload}, this message will be sent through the USB Daemon to the payloads controller hardware (Arduino). The field \texttt{config} is defined as:
 \begin{lstlisting}
 {
-<<<<<<< HEAD
     "priority" : integer,
     "command" : "string",
     "parameters" : "string",
     "arguments" : "string",
     "data" : "string",
     "response_size" : integer
-=======
-	"priority" : integer,
-	"command" : "string",
-	"parameters" : "string",
-	"arguments" : "string",
-	"data" : "string",
-	"response_size" : integer
->>>>>>> 5a175c411d56d857b15d038cf87e1e3a10ae47f3
 }
 \end{lstlisting}
 
@@ -160,7 +130,6 @@ If \texttt{type} is \texttt{payload}, this message will be sent through the USB 
 \begin{lstlisting}
 {
 "command_list" : [
-<<<<<<< HEAD
     {
     "name" : "procman_start",
     "description" : "Start the Process Manager",
@@ -206,53 +175,6 @@ If \texttt{type} is \texttt{payload}, this message will be sent through the USB 
     }
 ]
 }           
-=======
-	{
-	"name" : "procman_start",
-	"description" : "Start the Process Manager",
-	"nargs" : 0,
-	"raw_data" : false,
-	"type" : "message",
-	"config" : {
-		"destination" : "procman",
-		"origin_groups" : ["syscore"],
-		"destination_groups" : [],
-		"response_size" : 0
-		}
-	},
-	{
-	"name" : "temperature_arduino",
-	"description" : "Get temperature from the embedded sensor in the Arduino board",
-	"nargs" : 1,
-	"raw_data" : false,
-	"type" : "state",
-	"config" : {
-		"update_function" : "get_sensor_value_arduino(1)",
-		"dimensions" : 1,
-		"return_type" : "float",
-		"unit" : "K",
-		"dimension_name" : null,
-		"expire_group" : [{"app" : 15}]
-		}
-	},
-	{
-	"name" : "arduino_get_pin",
-	"description" : "Get the value of the given pin in the Arduino board",
-	"nargs" : 1,
-	"raw_data" : false,
-	"type" : "payload",
-	"config" : {
-		"priority" : 1,
-		"command" : "001",
-		"parameters" : "0110",
-		"arguments" : "@arg0",
-		"data" : null,
-		"response_size" : 1
-		}
-	}
-]
-}			
->>>>>>> 5a175c411d56d857b15d038cf87e1e3a10ae47f3
 \end{lstlisting}
 
 \subsection*{C translation}
@@ -417,7 +339,7 @@ const static struct MCSCommandOptionsPayload mcs_command_payload_list[] =
 \end{lstlisting}
 
 \subsection*{Java translation}
-<<<<<<< HEAD
+
 The Java class that contains the list of commands in the SDB is SDBPacket.java. These enum values are used as keys for lookups in an EnumMap.
 
 The EnumMap returns the bytes (cmd type and number) associated with its corresponding command, these are the ones that ultimately are sent to the SDB.
@@ -479,9 +401,6 @@ Below is an example of how to instanciate a new SDBPacket and send it:
     SDB.send(packet);
 \end{lstlisting}
 
-=======
-*TODO*
->>>>>>> 5a175c411d56d857b15d038cf87e1e3a10ae47f3
 
 \subsection*{Commands}
 The commands derived from the specification in the configuration file that will be travelling through the SDB, will have the following format:

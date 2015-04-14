@@ -64,7 +64,7 @@ uint8_t *to_raw(USBPacket packet, uint16_t *length)
     msg[2] = (packet.cmd_arg2 << 1) + 1;
     msg[3] = (packet.data_size >> 7) + 1;
     msg[4] = (packet.data_size << 1) + 1; 
-    for(i=0; i < packet.data_size; i++) {
+    for(i = 0; i < packet.data_size; i++) {
         msg[5 + i] = packet.data[i];  
     }
     msg[5 + packet.data_size] = packet.packet_id << 7;
