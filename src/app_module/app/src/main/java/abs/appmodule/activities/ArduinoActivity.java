@@ -69,15 +69,10 @@ public class ArduinoActivity extends ActionBarActivity
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_android);
 
-        /* Get the intent and the passed parameters */
-        //Intent intent = getIntent();
-
         /* Start the service on creating the activity */
         Intent service = new Intent(ArduinoActivity.this, TestService.class);
-        /* Pass the item id to the service to know which test to start */
-        //service.putExtra("id", intent.getStringExtra("id"));
-
         startService(service);
+
         /* Bind to the service so that we can interact with it */
         bindService(service, mConnection, Context.BIND_AUTO_CREATE);
     }

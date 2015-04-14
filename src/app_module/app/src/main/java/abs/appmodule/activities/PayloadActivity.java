@@ -17,8 +17,9 @@ import android.view.View;
 import android.widget.TextView;
 
 /**
- * This class is never used. However I keep it to develop a base class from
- * which all payload activities can extend in order to make development easier.
+ * ---- This class is never used ----
+ * However I keep it to develop a base class from which all payload
+ * activities can extend in order to make development easier.
  * This class will provide all the essential things as binding and starting
  * services. This is just an idea yet to be implemented.
  */

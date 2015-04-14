@@ -12,11 +12,23 @@
               android:baselineAligned="false"
               tools:context=".ArduinoActivity">
 
+    <TextView
+        android:id="@+id/pin_value_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/pin_value_label" />
+
+    <TextView
+        android:id="@+id/pin_value"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="0" />
+
     <Button
         android:id="@+id/android_start_test"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/check_button"
+        android:text="@string/start_button"
         android:layout_gravity="center_horizontal"
         android:onClick="onButtonClick" />
 

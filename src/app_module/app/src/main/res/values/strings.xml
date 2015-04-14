@@ -12,5 +12,6 @@
     <string name="check_button">Check</string>
 
     <string name="service_started">Service has started</string>
+    <string name="pin_value_label">Pin value read:</string>
 
 </resources>
