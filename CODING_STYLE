@@ -15,9 +15,12 @@ later. Anything that is left for later is prone to not being done.
 
 2. Line width
 --------------------------------------------------------------------------------
-Line width is 80 characters; not longer. Code, and especially patches, is much 
-more readable if limited to a sane line length. This length also makes it easier
-to embed code in DIN-A4 documents.
+Line width should be reasonably short to allow embedding the sources in DIN-A4
+documents, GitHub web-based code viewers, and to open it in a 13" full-screen 
+editor. Maintaining a readable, homogeneous width is more than recommended, 
+although an exact number of characters is not defined. As a general guideline, 
+lines should not be longer than 120 characters and splitting should not occur at 
+less than 80 characters. 
 
 
 3. Whitespace
@@ -58,8 +61,8 @@ to embed code in DIN-A4 documents.
     statement. 
  3. Flow control statements must not contain spaces between the name and 
     conditions/arguments.
-        if(condition)   /* Wrong.   */
-        if (condition)  /* Correct. */
+        if(condition)   /* Correct. */
+        if (condition)  /* Wrong.   */
  4. Blocks containing a single statement can skip the braces if and only if they 
     fit in a single line, e.g.: 
         if(condition) op = 42;
@@ -124,6 +127,8 @@ to embed code in DIN-A4 documents.
                 printf("Var is not 1, 2, 3 or 4\n");
                 break;
         }
+ 8. Java/C++ classes must be defined in single files (i.e. defining more than 
+    one class in a file is forbidden).
 
 
 5. Naming
@@ -148,6 +153,18 @@ to embed code in DIN-A4 documents.
  9. When wrapping standard library functions, use the prefix abs_ to alert
     readers that they are seeing a wrapped version; otherwise avoid this prefix:
         abs_malloc
+10. Files have to be named using the following structure:
+        <codename>[_<extra>].<ext>
+    Where:
+     <codename> is the project's abbreviation for the program name (e.g. "eps").
+        <extra> is an optional sub-name for the file (e.g. "driver").
+          <ext> is the file extension.
+    For C/C++ programs, two files are always compulsory: <codename>.c and 
+    <codename>.h. Additional files in that case would be, e.g.: <codename>.conf,
+    <codename>_<extra1>.c, <codename>_<extra2>.c, and so on. 
+    Although OO programs are excluded from this rule, the must always include,
+    at least, one source file (.java or .cpp) which name matches the codename of
+    the program. 
 
 
 6. Declarations
@@ -187,14 +204,14 @@ to embed code in DIN-A4 documents.
         extern char state_global;
         extern void my_function();
         
-        /* ---- example1.c: ----*/
+        /* ---- example_file1.c: ----*/
         int example_global;
         static private_function()
         {
             /* Function that uses example_global varaible. */
         }
         
-        /* ---- example2.h: ----*/
+        /* ---- example_file2.c: ----*/
         char state_global;
         void my_function()
         {
@@ -206,10 +223,57 @@ to embed code in DIN-A4 documents.
 --------------------------------------------------------------------------------
  1. Each source file must have one single header file. Their names must match 
     (except in the extension) and the header file should include all libraries
-    and external headers. The source file should contain only one #include 
-    directive.
- 2. Header files must contain all constants, macros, type definitions, and
-    global function prototypes and variables. 
+    and external headers. The source files should contain only one #include 
+    directive (see 5.10 for more information).
+ 2. Header files must contain ALL constants, macros, type definitions, and
+    global function prototypes and variables. The preferred header structure is
+    as follows:
+        /* File header (generic comment). */
+        
+        #ifndef __FILENAME_H
+        #define __FILENAME_H
+        
+        /* INCLUDES SECTION ***************************************************/
+        /* -- Standard C libraries: ----------------------------------------- */
+        #include <stdlib.h>     /* Standard C library.                        */
+        #include <stdio.h>      /* For general purpose I/O operations.        */
+        #include <stdarg.h>     /* For variable length arguments.             */
+        #include <string.h>     /* For str* functions.                        */
+        #include <....h>        /* Description ...                            */         
+        /* -- ABS libraries: ------------------------------------------------ */
+        #include <abs/abs.h>    /* Meta header-file for configuration.        */
+        #include <abs/log.h>    /* Log and Fileslog libraries.                */
+        #include <abs/....h>    /* Description ...                            */         
+        /* -- Other libraries: ---------------------------------------------- */
+        #include "....h"        /* Description ...                            */
+        #include <....h>        /* Description ...                            */
+                
+        /* CONSTANTS and MACROS SECTION ***************************************/
+        #define MAX_LINE_SIZE   30 
+        #define MAX(a,b)        (a > b ? a : b)
+        #define ...             ...
+        
+        /* TYPES SECTION ******************************************************/
+        typedef enum EnumName { A, B, C, ... };
+        typedef struct StructName1 {
+            ...
+        } StructName1;
+        
+        /* GLOBAL VARIABLES SECTION *******************************************/
+        extern int         variable1;
+        extern int         variable2;
+        extern char        *variable3;
+        extern StructName1 data;
+        extern EnumName    value;
+        
+        /* GLOBAL FUNCTION PROTOTYPES *****************************************/
+        extern void my_function1();
+        extern void my_function2();
+        extern void my_function3();
+        extern int *my_function4();
+        extern ... 
+        
+        #endif        
  3. Header files must have a conditional compilation with a descriptive name 
     given its domain and file name, and finish with a _H:
         #ifndef APPMOD_H
