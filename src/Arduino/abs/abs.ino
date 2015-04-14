@@ -6,11 +6,10 @@
 #include <Servo.h> 
 #include "abs.h"
 
-SoftwareSerial mySerial[MAX_SERIAL] = {SoftwareSerial(10,11), SoftwareSerial(7,8)};
 Servo myServo[MAX_SERVO];
+SoftwareSerial mySerial[MAX_SERIAL] = {SoftwareSerial(10,11), SoftwareSerial(7,8)};
 
 File buffer;
-
 uint8_t msg[MAX_PACKET_SIZE];
 uint16_t length;
 USBPacket packet;
@@ -69,13 +68,12 @@ void loop(void)
     }    
     for(i = 0; i < eventCount; i++) {
         if(event_list[i].execute == 1) {
-           packet = event_list[i].action;
-           res = execute_packet(&packet);
-           Serial.println("execute");
-           Serial.println(packet.command);
-           Serial.println(packet.parameters);
-           save_event_data(i, (char *) res.data);
-           event_list[i].execute = 0;
+            packet = event_list[i].action;
+            res = execute_packet(&packet);
+            Serial.println(packet.command);
+            Serial.println(packet.parameters);
+            save_event_data(i, (char *) res.data);
+            event_list[i].execute = 0;
         }
     }
 }
@@ -85,7 +83,6 @@ void events_routine(void)
     int i = 0;
     for(i = 0; i < eventCount; i++) {
       if(time % event_list[i].interval == 0) {
-            Serial.println("Event num: "+String(i));
             event_list[i].execute = 1;
         }
     }

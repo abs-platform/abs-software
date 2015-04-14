@@ -3,8 +3,6 @@
 
 #include "Arduino.h"
 
-#define TO_HEX(x)  (((x) > 10) ? (x) - 10 + 'A' : (x) + '0')
-
 #define IS_PIN_DIGITAL(p)       ((p) >= 0 && (p) <= 40)
 #define IS_PIN_ANALOG(p)        ((p) >= 0 && (p) <= 40)
 #define IS_PIN_PWM(p)           digitalPinHasPWM(p)

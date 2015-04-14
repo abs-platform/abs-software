@@ -2,19 +2,17 @@
 
 static char *sdb_to_usb(MCSPacket *packet, int *packet_size)
 {
-    char usb_packet[MAX_SIZE_USB_PACKET];
     MCSCommandOptionsPayload payload_package;
-
+    unsigned char usb_packet[MAX_SIZE_USB_PACKET];
     if(packet->type == MCS_TYPE_PAYLOAD) {
         payload_package = option_payload[packet->cmd];
         packet_size = 5 + payload_package.data_size;
-
         usb_packet[0] = (payload_package.command << 5) & 0xE0 + (payload_package.parameters << 1) & 0x1E + 1;
-        usb_packet[1] = (payload_package.cmd_arg1 << 1) + 1
-        usb_packet[2] = (payload_package.cmd_arg2 << 1) + 1
-        usb_packet[3] = (payload_package.data_size >> 7) + 1;
-        usb_packet[4] = (payload_package.data_size << 1) + 1; 
-        for(i=0; i < payload_package.data_size; i++) {
+        usb_packet[1] = (packet.cmd_args[0] << 1) + 1;
+        usb_packet[2] = (packet.cmd_args[1] << 1) + 1;
+        usb_packet[3] = (packet.data_size >> 7) + 1;
+        usb_packet[4] = (packet.data_size << 1) + 1; 
+        for(i=0; i < packet.data_size; i++) {
             usb_packet[5 + i] = packet.data[i];  
         }
         usb_packet[6 + i] = 10 << 1;

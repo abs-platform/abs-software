@@ -31,7 +31,7 @@ int save_event_data(int buffer_id, char *data)
     String temp = "buffer";
     temp.concat(buffer_id);
     temp.concat(".txt");
-    char filename[temp.length()+1];
+    char filename[temp.length() + 1];
     temp.toCharArray(filename, sizeof(filename));
     buffer = SD.open(filename, FILE_WRITE);
     buffer.println(data[0]);
@@ -39,9 +39,24 @@ int save_event_data(int buffer_id, char *data)
     return 1;
 }
 
+void dumpData(int buffer_id)
+{
+    noInterrupts();
+    String temp = "buffer";
+    temp.concat(buffer_id);
+    temp.concat(".txt");
+    char filename[temp.length() + 1];
+    temp.toCharArray(filename, sizeof(filename));
+    File dataFile = SD.open(filename);
+    if (dataFile) {
+        adk.SndData(1, (uint8_t *) dataFile.read());
+    }
+    dataFile.close();
+}
+
 uint8_t *to_raw(USBPacket packet, uint16_t *length)
 {
-    int i=0;
+    int i = 0;
     uint8_t msg[MAX_PACKET_SIZE]; 
     length = (uint16_t *) 4 + packet.data_size;
     msg[0] = (packet.command << 5) & 0xE0 + (packet.parameters << 1) & 0x1E + 1;
@@ -69,7 +84,7 @@ USBPacket process_packet(uint8_t *msg)
     Serial.println(packet.parameters);
     if(packet.data_size > 0) {  
         packet.pkg = &msg[5];
-    } 
+    }
     packet.packet_id = (packetCount++) % 128; 
     return packet;   
 }
@@ -108,7 +123,6 @@ USBPacket execute_packet(USBPacket *packet)
                 case ANALOG_READ:
                     if(IS_PIN_ANALOG(pin)) {
                         result = analogRead(pin);
-                        Serial.println(result);
                         response = usb_ok_data_packet((char *) result, 1);
                     } else {
                         response = usb_error_packet(1);
@@ -134,16 +148,16 @@ USBPacket execute_packet(USBPacket *packet)
             if(num <= MAX_SERIAL) {
                 switch(packet->parameters) {
                     case INIT:
-                        mySerial[num].begin(9600);
+                        mySerial[num].begin(packet->cmd_arg2); 
                         break;
                     case READ:
                         data = (char *) mySerial[num].read();
-                        response = usb_ok_data_packet(data,1);
+                        response = usb_ok_data_packet(data, 1);
                         break;
                     case WRITE:
                         Serial.println("Sending data");
                         data = packet->data;
-                        for(j = 0; j< packet->data_size; j++) {
+                        for(j = 0; j < packet->data_size; j++) {
                             mySerial[num].print(data[j]);
                         }
                         mySerial[num].print("\n");
@@ -171,6 +185,7 @@ USBPacket execute_packet(USBPacket *packet)
                     break;
                 case DUMP:
                     Serial.println("Dump event");
+                    dumpData(packet->cmd_arg1);
                     break;
             }
             break;
@@ -184,7 +199,7 @@ USBPacket execute_packet(USBPacket *packet)
                         myServo[num].attach(value);
                         break;
                     case SET_DC:
-                        myServo[num].write(value);                       
+                        myServo[num].write(value);
                         break;
                     case STOP:
                         myServo[num].detach();
