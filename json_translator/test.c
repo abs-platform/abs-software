@@ -9,13 +9,16 @@
 #define TYPE_MESSAGE 1
 #define TYPE_STATE 2
 #define TYPE_PAYLOAD 3
-#define LOCATION_FIELD 4
+#define COMMAND_TYPE_FIELD 4
+#define STATE_RESPONSE_SIZE_FIELD 5
+#define INT_SIZE 4
+#define FLOAT_SIZE 8
 
 int identify_type (cJSON *json)
 {
     int i;
     cJSON *subitem = json->child;
-    for(i = 0; i < LOCATION_FIELD; i++) subitem = subitem->next;
+    for(i = 0; i < COMMAND_TYPE_FIELD; i++) subitem = subitem->next;
     if(strcmp(subitem->valuestring, "message") == 0) return TYPE_MESSAGE;
     else if(strcmp(subitem->valuestring, "state") == 0) return TYPE_STATE;
     else return TYPE_PAYLOAD;
@@ -37,7 +40,11 @@ void translate_message (cJSON *json)
     json = json->next;
     if(json->valueint) fprintf(out, "        .raw_data = true,\n");
     else fprintf(out, "        .raw_data = false,\n");
+    /*Go to the configuration field*/
     json = json->next->next->child;
+    /*Go to the response size field using a temporary variable because we will
+     go over other fields. The original 'json' variable will continue to point
+     in the logical, consequential order*/
     subitem = json->next->next->next;
     fprintf(out, "        .response_size = %d,\n", subitem->valueint);
     fprintf(out, "    },\n    .destination = \"%s\",\n", json->valuestring);
@@ -88,14 +95,20 @@ void translate_state (cJSON *json)
     json = json->next;
     if(json->valueint) fprintf(out, "        .raw_data = true,\n");
     else fprintf(out, "        .raw_data = false,\n");
+    /*Go to the config field, and then to the return type field*/
     json = json->next->next->child;
-    subitem = json->next->next->next->next;
-    /*TO REVISE: What is response size? int/float/string? Or dimension_name?*/
-    fprintf(out, "        .response_size = %d\n", subitem->valueint);
+    subitem = json->next->next;
+    if(strcmp(subitem->valuestring, "int") == 0) {
+        fprintf(out, "        .response_size = %d,\n", INT_SIZE);
+    } else if(strcmp(subitem->valuestring, "float") == 0) {
+        fprintf(out, "        .response_size = %d,\n", FLOAT_SIZE);
+    } else {
+        fprintf(out, "        .response_size = 0,\n"); /*arbitrarily long size?*/
+    }
     fprintf(out, "    },\n    .request = %s,\n", json->valuestring);
     json = json->next;
     fprintf(out, "    .dimensions = %d,\n", json->valueint);
-    /*TO REVISE: 'Unit' is not used? Same with previous others*/
+    /*TO REVISE: 'Unit' and other unused fields, to be printed as comments?*/
     json = json->next->next->next->next;
     if(json->child) {
         fprintf(out, "    .expire_group = {\n");
@@ -120,6 +133,7 @@ void translate_state (cJSON *json)
 
 void translate_payload (cJSON *json)
 {
+    int i;
     FILE *out;
     cJSON *subitem;
 
@@ -135,8 +149,10 @@ void translate_payload (cJSON *json)
     json = json->next;
     if(json->valueint) fprintf(out, "        .raw_data = true,\n");
     else fprintf(out, "        .raw_data = false,\n");
+    /*Go to configuration field*/
     subitem = json->next->next->child;
-    subitem = subitem->next->next->next->next->next;
+    /*Go to response_size field*/
+    for(i = 0; i < STATE_RESPONSE_SIZE_FIELD; i++) subitem = subitem->next;
     fprintf(out, "        .response_size = %d,\n", subitem->valueint);
     fprintf(out, "    },\n");
     json = json->next->next->child;
@@ -169,7 +185,7 @@ void main (){
     /*Load the json file, to choose from 'single_message', 'single_state' and
      'single_payload' depending on what to test. Keep in mind that everything
      will printed and thus overwritten in the same output file.*/
-    f = fopen("single_message.json", "r");
+    f = fopen("single_payload.json", "r");
     fseek(f, 0, SEEK_END); 
     len = ftell(f);
     fseek(f, 0, SEEK_SET);
