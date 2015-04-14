@@ -2,9 +2,14 @@
 #include <usbhub.h>
 #include <TimerOne.h>
 #include <SoftwareSerial.h>
+#include <SD.h>
+#include <Servo.h> 
 #include "abs.h"
 
-SoftwareSerial mySerial[MAX_SERIAL] = {SoftwareSerial(6,7), SoftwareSerial(7,8)};
+SoftwareSerial mySerial[MAX_SERIAL] = {SoftwareSerial(10,11), SoftwareSerial(7,8)};
+Servo myServo[MAX_SERVO];
+
+File buffer;
 
 uint8_t msg[MAX_PACKET_SIZE];
 uint16_t length;
@@ -28,15 +33,21 @@ void setup(void)
 {
     Serial.begin(115200);
     //while(!Serial); 
-    Serial.println("\r\nADK demo start");
+    Serial.println("\r\nArduino firmware start");
         
     if(Usb.Init() == -1) {
         Serial.println("OSCOKIRQ failed to assert");
         while(Usb.Init() == -1); /* retry */
     }
-    Timer1.initialize(5000000);
+    Timer1.initialize(500000);
     Timer1.pwm(9, 512);
     Timer1.attachInterrupt(events_routine);
+    
+    pinMode(3, OUTPUT);
+   
+    if (!SD.begin(3)) {
+        Serial.println("Error initializing SDcard");
+    }
 }
 
 void loop(void)
@@ -50,23 +61,23 @@ void loop(void)
     length = sizeof(msg);
     adk.RcvData(&length, msg);
     if(length > 0) {
-        noInterrupts();
         packet = process_packet(msg);
         res = execute_packet(&packet);
         response = to_raw(res, &length); 
+        adk.SndData(length, response); 
         adk.SndData(length, response);    
-        interrupts();
-    }
-    
+    }    
     for(i = 0; i < eventCount; i++) {
         if(event_list[i].execute == 1) {
            packet = event_list[i].action;
            res = execute_packet(&packet);
-           save_event_data(i, res.data);
+           Serial.println("execute");
+           Serial.println(packet.command);
+           Serial.println(packet.parameters);
+           save_event_data(i, (char *) res.data);
            event_list[i].execute = 0;
         }
     }
-    delay(100);
 }
 
 void events_routine(void)

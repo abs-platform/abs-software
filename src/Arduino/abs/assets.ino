@@ -2,7 +2,7 @@ USBPacket usb_ok_packet()
 {
     USBPacket packet;
     packet.command = 0;
-    packet.parameters = 1;
+    packet.parameters = 0;
     return packet;
 }
 
@@ -10,7 +10,7 @@ USBPacket usb_ok_data_packet(char *result, int size)
 {
     USBPacket packet;
     packet.command = 0; 
-    packet.parameters = 2;
+    packet.parameters = 1;
     packet.data_size = size;
     packet.data = result;
     return packet;
@@ -20,7 +20,7 @@ USBPacket usb_error_packet(int error)
 {
     USBPacket packet;
     packet.command = 0;
-    packet.parameters = 3;
+    packet.parameters = 2;
     packet.cmd_arg1 = error;
     return packet;
 }
@@ -28,6 +28,14 @@ USBPacket usb_error_packet(int error)
 int save_event_data(int buffer_id, char *data)
 {
     Serial.println("Data saved");
+    String temp = "buffer";
+    temp.concat(buffer_id);
+    temp.concat(".txt");
+    char filename[temp.length()+1];
+    temp.toCharArray(filename, sizeof(filename));
+    buffer = SD.open(filename, FILE_WRITE);
+    buffer.println(data[0]);
+    buffer.close();
     return 1;
 }
 
@@ -53,12 +61,14 @@ USBPacket process_packet(uint8_t *msg)
     USBPacket packet;
   
     packet.command = (msg[0] >> 5) & 0x07;
-    packet.parameters = (msg[0] >> 3) & 0x03;
+    packet.parameters = (msg[0] >> 1) & 0x0F;
     packet.cmd_arg1 = (msg[1] >> 1);
     packet.cmd_arg2 = (msg[2] >> 1);
-    packet.data_size = msg[4] + (msg[3] << 8);
-    if(packet.data_size > 0) {
-        packet.data = (char *)msg[4];
+    packet.data_size = msg[4] >> 1 + ((msg[3] & 0xFE) << 8);
+    Serial.println(packet.command);
+    Serial.println(packet.parameters);
+    if(packet.data_size > 0) {  
+        packet.pkg = &msg[5];
     } 
     packet.packet_id = (packetCount++) % 128; 
     return packet;   
@@ -68,7 +78,7 @@ USBPacket execute_packet(USBPacket *packet)
 {
     USBPacket response;
     char *data;
-    int pin, num, value, result;
+    int pin, num, value, result, j;
 
     switch(packet->command) {
         case BASIC_IO:
@@ -98,6 +108,7 @@ USBPacket execute_packet(USBPacket *packet)
                 case ANALOG_READ:
                     if(IS_PIN_ANALOG(pin)) {
                         result = analogRead(pin);
+                        Serial.println(result);
                         response = usb_ok_data_packet((char *) result, 1);
                     } else {
                         response = usb_error_packet(1);
@@ -130,13 +141,20 @@ USBPacket execute_packet(USBPacket *packet)
                         response = usb_ok_data_packet(data,1);
                         break;
                     case WRITE:
-                        mySerial[num].println(packet->data);
+                        Serial.println("Sending data");
+                        data = packet->data;
+                        for(j = 0; j< packet->data_size; j++) {
+                            mySerial[num].print(data[j]);
+                        }
+                        mySerial[num].print("\n");
+                        
                         response = usb_ok_packet();
                         break;
                 }
             } else {
                 response = usb_error_packet(1);
             }
+            break;
         case EVENT:
             /* Command type: Events */
             switch(packet->parameters) {
@@ -145,7 +163,7 @@ USBPacket execute_packet(USBPacket *packet)
                         event_list[eventCount].bufferid = eventCount;
                         event_list[eventCount].interval = packet->cmd_arg1;
                         event_list[eventCount].execute = 0;
-                        event_list[eventCount].action = process_packet((uint8_t *)packet->data);
+                        event_list[eventCount].action = process_packet(packet->pkg);
                         eventCount++;
                     } else {
                         response = usb_error_packet(1); 
@@ -156,6 +174,24 @@ USBPacket execute_packet(USBPacket *packet)
                     break;
             }
             break;
+        case SERVO:
+            /* Command type: PWM */      
+            num = packet->cmd_arg1; 
+            value = packet->cmd_arg2;
+            if(num <= MAX_SERIAL) {
+                switch(packet->parameters) {
+                    case START:
+                        myServo[num].attach(value);
+                        break;
+                    case SET_DC:
+                        myServo[num].write(value);                       
+                        break;
+                    case STOP:
+                        myServo[num].detach();
+                        break;
+                }
+                break;
+            }
         default:
             /* Command type: Unknown */
             response = usb_error_packet(1);

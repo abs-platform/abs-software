@@ -3,10 +3,13 @@
 
 #include "Arduino.h"
 
-#define IS_PIN_DIGITAL(p)       ((p) >= 2 && (p) <= 40)
-#define IS_PIN_ANALOG(p)        ((p) >= 2 && (p) <= 40)
+#define TO_HEX(x)  (((x) > 10) ? (x) - 10 + 'A' : (x) + '0')
+
+#define IS_PIN_DIGITAL(p)       ((p) >= 0 && (p) <= 40)
+#define IS_PIN_ANALOG(p)        ((p) >= 0 && (p) <= 40)
 #define IS_PIN_PWM(p)           digitalPinHasPWM(p)
 
+#define MAX_SERVO 2
 #define MAX_SERIAL 2
 #define MAX_EVENTS 10
 #define MAX_PACKET_SIZE 500
@@ -19,6 +22,7 @@ typedef struct {
      int cmd_arg2;
      int data_size;
      char *data;
+     uint8_t *pkg;
      int packet_id;
  } USBPacket;
 
@@ -33,7 +37,8 @@ typedef enum {
     CONTROL,
     BASIC_IO,
     COMMS,
-    EVENT
+    EVENT,
+    SERVO
 } Command;
 
 typedef enum {
@@ -53,6 +58,12 @@ typedef enum {
     CONF,    
     DUMP
 } ParametersEvents;
+
+typedef enum {
+    START,
+    SET_DC,    
+    STOP  
+} ParametersServo;
 
 typedef enum {
   
