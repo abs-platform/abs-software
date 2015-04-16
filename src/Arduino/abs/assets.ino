@@ -6,13 +6,14 @@ USBPacket usb_ok_packet()
     return packet;
 }
 
-USBPacket usb_ok_data_packet(char *result, int size)
+USBPacket usb_ok_data_packet(int arg, char *result, int size)
 {
     USBPacket packet;
     packet.command = 0; 
     packet.parameters = 1;
+    packet.cmd_arg1 = (arg >> 1) & 0x7F;
     packet.data_size = size;
-    packet.data = result;
+    packet.data = (char *)((arg >> 1) & 0x7F);
     return packet;
 }
 
@@ -33,9 +34,11 @@ int save_event_data(int buffer_id, char *data)
     temp.concat(".txt");
     char filename[temp.length() + 1];
     temp.toCharArray(filename, sizeof(filename));
-    buffer = SD.open(filename, FILE_WRITE);
-    buffer.println(data[0]);
-    buffer.close();
+    if(buffer.available()) {
+      buffer = SD.open(filename, FILE_WRITE);
+      buffer.println(data[0]);
+      buffer.close();
+    }
     return 1;
 }
 
@@ -58,30 +61,27 @@ uint8_t *to_raw(USBPacket packet, uint16_t *length)
 {
     int i = 0;
     uint8_t msg[MAX_PACKET_SIZE]; 
-    length = (uint16_t *) 4 + packet.data_size;
-    msg[0] = (packet.command << 5) & 0xE0 + (packet.parameters << 1) & 0x1E + 1;
+    *length = 4 + packet.data_size;
+    
+    msg[0] = ((packet.command << 5) & 0xE0) + ((packet.parameters << 1) & 0x1E) + 1;
     msg[1] = (packet.cmd_arg1 << 1) + 1;
+    Serial.println(msg[1],HEX);
     msg[2] = (packet.cmd_arg2 << 1) + 1;
     msg[3] = (packet.data_size >> 7) + 1;
     msg[4] = (packet.data_size << 1) + 1; 
-    for(i = 0; i < packet.data_size; i++) {
-        msg[5 + i] = packet.data[i];  
-    }
+    msg[5] = 100;
     msg[5 + packet.data_size] = packet.packet_id << 7;
     return &msg[0];
 }
 
 USBPacket process_packet(uint8_t *msg)
 { 
-    USBPacket packet;
-  
+    USBPacket packet;  
     packet.command = (msg[0] >> 5) & 0x07;
     packet.parameters = (msg[0] >> 1) & 0x0F;
     packet.cmd_arg1 = (msg[1] >> 1);
     packet.cmd_arg2 = (msg[2] >> 1);
     packet.data_size = msg[4] >> 1 + ((msg[3] & 0xFE) << 8);
-    Serial.println(packet.command);
-    Serial.println(packet.parameters);
     if(packet.data_size > 0) {  
         packet.pkg = &msg[5];
     }
@@ -123,7 +123,8 @@ USBPacket execute_packet(USBPacket *packet)
                 case ANALOG_READ:
                     if(IS_PIN_ANALOG(pin)) {
                         result = analogRead(pin);
-                        response = usb_ok_data_packet((char *)result, 1);
+                        Serial.println(result);
+                        response = usb_ok_data_packet(result, NULL, 1);
                     } else {
                         response = usb_error_packet(1);
                     }
@@ -132,7 +133,7 @@ USBPacket execute_packet(USBPacket *packet)
                     if(IS_PIN_DIGITAL(pin)) {
                         pinMode(pin, INPUT);
                         result = digitalRead(pin);
-                        response = usb_ok_data_packet((char *)result, 1);
+                        response = usb_ok_data_packet(result, NULL, 1);
                     } else {
                         response = usb_error_packet(1);
                     }
@@ -152,7 +153,7 @@ USBPacket execute_packet(USBPacket *packet)
                         break;
                     case READ:
                         data = (char *) mySerial[num].read();
-                        response = usb_ok_data_packet(data, 1);
+                        response = usb_ok_data_packet(NULL, data, 1);
                         break;
                     case WRITE:
                         Serial.println("Sending data");

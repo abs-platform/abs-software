@@ -1,5 +1,9 @@
 package com.google.abs.payloadsdk.Measures;
 
 public class SystemValue {
-    //TODO
+
+    public SystemValue()
+    {
+
+    }
 }

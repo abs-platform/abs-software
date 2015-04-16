@@ -10,7 +10,7 @@ import com.google.abs.payloadsdk.Measures.Energy;
 import com.google.abs.payloadsdk.Measures.OrbitalState;
 import com.google.abs.payloadsdk.Measures.Power;
 import com.google.abs.payloadsdk.SBD.SDB;
-
+import com.google.abs.payloadsdk.SBD.SDBPacket;
 
 
 public class PayloadApp extends Service {
@@ -23,7 +23,7 @@ public class PayloadApp extends Service {
         sdb = new SDB();
         sdb.execute();
         arduino = new Arduino(sdb);
-        /* sdb.send(new SDBPacket(CmdType.HAND_SHAKE,appName.getBytes())); */
+        //sdb.send(new SDBPacket(SDBPacket.CMD.HANDSHAKE, appName.getBytes()));
     }
 
     public Arduino getArduino()

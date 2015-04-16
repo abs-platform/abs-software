@@ -28,8 +28,9 @@ public class Arduino {
 
     public int digitalWrite(int pin, int value)
     {
+        byte[] array = {(byte)pin, (byte)value};
         SDBPacket response = sdb.send(new SDBPacket(
-                SDBPacket.CMD.DIGITAL_WRITE,(byte)pin, (byte)value));
+                SDBPacket.CMD.DIGITAL_WRITE, array, null));
 
         if(response.getCMD() == SDBPacket.CMD.OK) {
             return 1;
@@ -47,8 +48,9 @@ public class Arduino {
 
     public int digitalRead(int pin)
     {
+        byte[] array = {(byte)pin, (byte)0};
         SDBPacket response = sdb.send(new SDBPacket(
-                SDBPacket.CMD.DIGITAL_READ, (byte)pin));
+                SDBPacket.CMD.DIGITAL_READ, array, null));
 
         if(response.getCMD() == SDBPacket.CMD.OK_DATA) {
             return response.getParameter(0);
@@ -67,8 +69,9 @@ public class Arduino {
 
     public int analogWrite(int pin, int value)
     {
+        byte[] array = {(byte)pin, (byte)value};
         SDBPacket response = sdb.send(new SDBPacket(
-                SDBPacket.CMD.ANALOG_WRITE,(byte)pin, (byte)value));
+                SDBPacket.CMD.ANALOG_WRITE, array, null));
 
         if(response.getCMD() == SDBPacket.CMD.OK) {
             return 1;
@@ -86,14 +89,30 @@ public class Arduino {
 
     public int analogRead(int pin)
     {
+        byte[] array = {(byte)pin, (byte)0};
         SDBPacket response = sdb.send(new SDBPacket(
-                SDBPacket.CMD.ANALOG_READ, (byte)pin));
+                SDBPacket.CMD.ANALOG_READ, array, null));
 
         if(response.getCMD() == SDBPacket.CMD.OK_DATA) {
-            return response.getParameter(0);
-            /* TODO convert value to volts */
+            return response.getParameter(0) & 0xFF;
         } else {
             return -1; /* something has gone wrong */
         }
+    }
+
+    /**
+     * Creates a new Event and returns an EventHandler
+     *
+     * @return EventHandler
+     */
+
+    public EventHandler createEvent(int interval, byte[] data)
+    {
+        byte[] array = {(byte)interval, (byte)0};
+
+        SDBPacket response = sdb.send(new SDBPacket(
+                SDBPacket.CMD.CREATE_EVENT, array, data));
+
+        return null; //new EventHandler(response.getParameter(0));
     }
 }

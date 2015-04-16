@@ -62,20 +62,19 @@ void loop(void)
     if(length > 0) {
         packet = process_packet(msg);
         res = execute_packet(&packet);
-        response = to_raw(res, &length); 
+        response = to_raw(res, &length);
         adk.SndData(length, response); 
         adk.SndData(length, response);    
     }    
+   
     for(i = 0; i < eventCount; i++) {
         if(event_list[i].execute == 1) {
             packet = event_list[i].action;
             res = execute_packet(&packet);
-            Serial.println(packet.command);
-            Serial.println(packet.parameters);
             save_event_data(i, (char *) res.data);
             event_list[i].execute = 0;
         }
-    }
+    }  
 }
 
 void events_routine(void)
@@ -83,6 +82,7 @@ void events_routine(void)
     int i = 0;
     for(i = 0; i < eventCount; i++) {
       if(time % event_list[i].interval == 0) {
+            Serial.println("Event!!!");
             event_list[i].execute = 1;
         }
     }

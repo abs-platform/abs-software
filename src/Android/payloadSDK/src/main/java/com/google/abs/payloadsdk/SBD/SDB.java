@@ -57,7 +57,7 @@ public class SDB extends AsyncTask<Void, Void, Void> {
                 txStream.write(packet.toRaw());
                 txStream.flush();
                 Log.d("[ABS]", "Packet sent");
-                while (result == null) {
+                while (result==null) {
                     SystemClock.sleep(500);
                 }
                 Log.d("[ABS]", "Packet received");
