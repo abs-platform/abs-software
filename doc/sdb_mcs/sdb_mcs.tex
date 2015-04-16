@@ -1,0 +1,390 @@
+\documentclass[12pt,a4paper]{report}
+
+\usepackage[a4paper]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{parskip}
+
+\definecolor{light-gray}{gray}{0.8}
+
+\lstset{backgroundcolor=\color{light-gray}, language=bash, basicstyle=\ttfamily\scriptsize, tabsize=2, showstringspaces=false}
+
+\begin{document}
+
+\section*{SDB MCS}
+
+\subsection*{Introduction}
+The System Data Bus (SDB) Modular Command System (MCS) is a system to expand and shrink the Android Beyond the Stratosphere (ABS) software and hardware architecture by adding and removing commands.
+
+These commands are added to a configuration file, which is later processed and translated into all necessary functions and structures for the different parts of the ABS software architecture.
+
+\subsection*{Configuration file}
+The configuration file will be in JSON format. This format is a very simple format, which allows easy machine processing, while making it also easy for people to write directly on it.
+
+The specification for the MCS configuration file is the following:
+
+\begin{lstlisting}
+{
+"command_list" : [
+	command1,
+	command2,
+	...
+	commandN
+]
+}
+\end{lstlisting}
+
+\texttt{commandX} is defined as:
+\begin{lstlisting}
+{
+    "id" : "string",
+    "description" : "string",
+    "nargs" : integer,
+    "raw_data" : boolean,
+    "type" : "string",
+    "config" : config
+}
+\end{lstlisting}
+
+\begin{itemize}
+\item \texttt{id}: command identifier string. Must be composed just by lowercase letters, numbers (not the first character) and underscores. It must be unique per each command.
+\item \texttt{description}: human readable description, used for creating documentation. Migth be \texttt{null}.
+\item \texttt{nargs}: fixed number of arguments that this command accepts. Might be zero.
+\item \texttt{raw\_data}: This field will be \texttt{true} when the last argument is composed of arbitrarily long data. In case there is no raw data, it should be \texttt{false}.
+\item \texttt{type}: type of the command. It is one of \texttt{state}, \texttt{message}, \texttt{payload}.
+\item \texttt{config}: configuration fields dependant on the type of command. Explained in the following sections.
+\end{itemize}
+
+\subsubsection*{Messages}
+If \texttt{type} is \texttt{messages}, this command is a simple message sent from one module of the SDB to another, and each one of them should be able to understand it. Field \texttt{config} is defined as:
+\begin{lstlisting}
+{
+	"destination" : "string",
+	"origin_groups" : ["string", "string", ...],
+	"destination_groups" : ["string", "string", ...],
+	"response_size" : integer
+}
+\end{lstlisting}
+
+\begin{itemize}
+\item \texttt{destination}: the destination for this message. It can be static (the value is the name of the destination), an argument (the value is \texttt{@argX}, where X is the number of argument, starting by 0), or it can be \texttt{null} (the message is for the SDB).
+\item \texttt{origin\_groups}: the array of groups that can send this command. Groups not mentioned cannot send the command. The wildcard \texttt{any} can be used, and all other elements in the array can be ignored.
+\item \texttt{destination\_groups}: the array of groups that can receive this command. If the destination is static or \texttt{null}, it should be ignored. Groups not mentioned cannot receive the command. The wildcard \texttt{any} can be used, and all other elements in the array can be ignored.
+\item \texttt{response\_size}: number of bytes expected back as the command response. It can be 0 if there is no expected response, or -1 if the size is unknown beforehand.
+\end{itemize}
+
+\subsubsection*{States}
+If \texttt{type} is \texttt{state}, this command relates with a system state, such as the value of a temperature sensor. Field \texttt{nargs} should be always 1, and field \texttt{config} is defined as:
+\begin{lstlisting}
+{
+    "update_function" : "string",
+    "dimensions" : integer,
+    "return_type" : "string",
+    "unit" : "string",
+    "dimension_name" : "string",
+    "expire_group" : [
+    		{"string" : integer},
+    		{"string" : integer},
+    		...
+    		]
+}
+\end{lstlisting}
+
+\begin{itemize}
+\item \texttt{update\_function}: valid C function call to update the state value when it is too old. The function called must exist, and the parameters must be valid.
+\item \texttt{dimensions}: fixed number of dimensions that this state has. Must be one or bigger.
+\item \texttt{return\_type}: type of each of the dimensions of the state. It is one of \texttt{int}, \texttt{float}, \texttt{string}.
+\item \texttt{unit}: human readable unit of the state. Might be \texttt{null}.
+\item \texttt{dimension\_name}: human readable name of the dimensions in the order returned by the update function. Might be \texttt{null}.
+\item \texttt{expire\_group}: array of minimum expire times per group. By default there is no minimum. The array might be empty. The elements of the array are objects of just one element in this format:
+\begin{itemize}
+\item key: The name of the group.
+\item value: An integer or the minimum expire time for that group.
+\end{itemize}
+\end{itemize}
+
+\subsubsection*{Payloads}
+If \texttt{type} is \texttt{payload}, this message will be sent through the USB Daemon to the payloads controller hardware (Arduino). The field \texttt{config} is defined as:
+\begin{lstlisting}
+{
+	"priority" : integer,
+	"command" : "string",
+	"parameters" : "string",
+	"arguments" : "string",
+	"data" : "string",
+	"response_size" : integer
+}
+\end{lstlisting}
+
+\begin{itemize}
+\item \texttt{priority}: priority of this command in the USB queue from 1 to 100. It is not guaranteed that all the levels will be used.
+\item \texttt{command} : string with the bits for the \texttt{cmd} field for the command.
+\item \texttt{parameters} : string with the bits for the \texttt{parameters} field for the command. Migth be the value of an argument, by using \texttt{@argX}, where X is the number of argument, starting by 0.
+\item \texttt{arguments}: string with the bits for the \texttt{arguments} field in the command. Migth be the value of an argument, by using \texttt{@argX}, where X is the number of argument, starting by 0.
+\item \texttt{data}: string with the bits for the data field in the command. Migth be the value of an argument, by using \texttt{@argX}, where X is the number of argument, starting by 0. It might also be \texttt{null}.
+\item \texttt{response\_size}: number of bytes expected back as the command response. It can be 0 if there is no expected response, or -1 if the size is unknown beforehand.
+\end{itemize}
+
+\subsubsection*{Full example}
+\begin{lstlisting}
+{
+"command_list" : [
+	{
+	"name" : "procman_start",
+	"description" : "Start the Process Manager",
+	"nargs" : 0,
+	"raw_data" : false,
+	"type" : "message",
+	"config" : {
+		"destination" : "procman",
+		"origin_groups" : ["syscore"],
+		"destination_groups" : [],
+		"response_size" : 0
+		}
+	},
+	{
+	"name" : "temperature_arduino",
+	"description" : "Get temperature from the embedded sensor in the Arduino board",
+	"nargs" : 1,
+	"raw_data" : false,
+	"type" : "state",
+	"config" : {
+		"update_function" : "get_sensor_value_arduino(1)",
+		"dimensions" : 1,
+		"return_type" : "float",
+		"unit" : "K",
+		"dimension_name" : null,
+		"expire_group" : [{"app" : 15}]
+		}
+	},
+	{
+	"name" : "arduino_get_pin",
+	"description" : "Get the value of the given pin in the Arduino board",
+	"nargs" : 1,
+	"raw_data" : false,
+	"type" : "payload",
+	"config" : {
+		"priority" : 1,
+		"command" : "001",
+		"parameters" : "0110",
+		"arguments" : "@arg0",
+		"data" : null,
+		"response_size" : 1
+		}
+	}
+]
+}			
+\end{lstlisting}
+
+\subsection*{C translation}
+The C file that contains the lists of commands is located in \textit{include/auto\_mcs.h}. This file has the following basic structure:
+
+\begin{lstlisting}
+/* AUTOGENERATED. DO NOT MODIFY */
+
+#ifndef __AUTO_MCS_H
+#define __AUTO_MCS_H
+
+#ifndef __MCS_H
+#error "This header should not be included directly. Include mcs.h"
+#endif
+
+typedef enum MCSCommand {
+    
+} MCSCommand;
+
+const static struct MCSCommandOptionsMessage mcs_command_message_list[] =
+{
+    
+};
+
+#define mcs_command_message_list_size 
+
+const static struct MCSCommandOptionsState mcs_command_state_list[] =
+{
+    
+};
+
+#define mcs_command_state_list_size 
+
+const static struct MCSCommandOptionsPayload mcs_command_payload_list[] =
+{
+    
+};
+
+#define mcs_command_payload_list_size 
+
+#endif
+\end{lstlisting}
+
+The definitions of the elements of the list are the following (from \textit{include/mcs.h}):
+\begin{lstlisting}
+/* Datatypes for the autogenerated lists of commands */
+typedef struct MCSCommandOptionsCommon {
+    const char *name;
+    unsigned short nargs;
+    bool raw_data;
+    unsigned int response_size;
+} MCSCommandOptionsCommon;
+
+struct MCSCommandOptionsMessage {
+    struct MCSCommandOptionsCommon cmd;
+    const char *destination;
+    SDBGroup origin_groups[SDB_GROUP_MAX];
+    SDBGroup destination_groups[SDB_GROUP_MAX];
+};
+
+struct MCSCommandOptionsStatePerms {
+    SDBGroup group;
+    time_t max_expire;
+};
+
+struct MCSCommandOptionsState {
+    struct MCSCommandOptionsCommon cmd;
+    void *(*request)(MCSPacket *);
+    unsigned int dimensions;
+    struct MCSCommandOptionsStatePerms expire_group[SDB_GROUP_MAX];
+};
+
+struct MCSCommandOptionsPayload {
+    struct MCSCommandOptionsCommon cmd;
+    unsigned int priority;
+    const char *command;
+    const char *parameters;
+    const char *arguments;
+    const char *data;
+};
+\end{lstlisting}
+
+Each field name corresponds to the field name in the configuration file. The only field that is different is the \texttt{request} field in the struct \texttt{MCSCommandState}. This field corresponds to the autogenerated function explained below.
+
+\subsubsection*{States}
+Each state will have a function to call in the SDB when it arrives. This function is autogenerated.
+*TODO*
+
+\subsubsection{Full example}
+\begin{lstlisting}
+/* AUTOGENERATED. DO NOT MODIFY */
+
+#ifndef __AUTO_MCS_H
+#define __AUTO_MCS_H
+
+#ifndef __MCS_H
+#error "This header should not be included directly. Include mcs.h"
+#endif
+
+typedef enum MCSCommand {
+    MCS_MESSAGE_PROCMAN_START       = 0,
+    MCS_STATE_TEMPERATURE_ARDUINO   = 65536, /* 0x10000 */
+    MCS_PAYLOAD_ARDUINO_GET_PIN     = 131072, /* 0x20000 */
+} MCSCommand;
+
+const static struct MCSCommandOptionsMessage mcs_command_message_list[] =
+{
+    {
+    .cmd = {
+        .name = "procman_start",
+        .nargs = 0,
+        .raw_data = false,
+        .response_size = 0,
+    },
+    .destination = "procman",
+    .origin_groups = {SDB_GROUP_SYSCORE},
+    .destination_groups = {},
+    },
+};
+
+#define mcs_command_message_list_size 1
+
+const static struct MCSCommandOptionsState mcs_command_state_list[] =
+{
+    {
+    .cmd = {
+        .name = "temperature_arduino",
+        .nargs = 1,
+        .raw_data = false,
+        .response_size = 8,
+    },
+    .request = auto_get_temperature_arduino,
+    .dimensions = 1,
+    .expire_group = {
+            { .group = SDB_GROUP_APP, .max_expire = 15 },
+        },
+    },
+};
+
+#define mcs_command_state_list_size 1
+
+const static struct MCSCommandOptionsPayload mcs_command_payload_list[] =
+{
+    {
+    .cmd = {
+        .name = "arduino_get_pin",
+        .nargs = 1,
+        .raw_data = false,
+        .response_size = 1,
+    },
+    .priority = 1,
+    .command = "001",
+    .parameters = "0110",
+    .arguments = "@0",
+    .data = NULL,
+    },
+};
+
+#define mcs_command_payload_list_size 1
+
+#endif
+\end{lstlisting}
+
+\subsection*{Java translation}
+*TODO*
+
+\subsection*{Commands}
+The commands derived from the specification in the configuration file that will be travelling through the SDB, will have the following format:
+
+If it does not have raw data:
+\begin{itemize}
+\item Command type (1 byte). For the actually defined types: \texttt{message} is type 0, \texttt{state} is type 1 and \texttt{payload} is type 2. Types 253, 254 and 255 are reserved.
+\item Command number (2 bytes)
+\item Arguments (\texttt{nargs} * 1 byte)
+\end{itemize}
+
+If it does have raw data:
+\begin{itemize}
+\item Command type (1 byte)
+\item Command number (2 bytes)
+\item Arguments ((\texttt{nargs} - 1) * 1 byte)
+\item Raw data size (2 bytes)
+\item Raw data ((Raw data size) * 1 byte)
+\end{itemize}
+
+All commands will receive an answer:
+
+Answer in case the command was sent and processed correctly, but no data back is expected:
+\begin{itemize}
+\item Confirmation identifier (number 253 encoded in 1 byte)
+\end{itemize}
+
+Answer in case the command was sent and processed correctly, and data back is expected:
+\begin{itemize}
+\item Confirmation identifier (number 254 encoded in 1 byte)
+\item Raw data size (2 bytes)
+\item Raw data ((Raw data size) * 1 byte)
+\end{itemize}
+
+Answer in case there was an error:
+\begin{itemize}
+\item Error identifier (number 255 encoded in 1 byte)
+\item Error code (4 bytes)
+\end{itemize}
+
+The size of data returned is specified in the command definition. In case of a command of type \texttt{state}, the size of data returned depends on the field \texttt{return\_type}:
+\begin{itemize}
+\item \texttt{int}: dimensions * 4 bytes
+\item \texttt{float}: dimensions * 8 bytes
+\item \texttt{string}: arbitrarily long size
+\end{itemize}
+
+\end{document}
