@@ -103,22 +103,26 @@ void translate_state (cJSON *json)
     json = json->next;
     if(json->valueint) fprintf(out, "        .raw_data = true,\n");
     else fprintf(out, "        .raw_data = false,\n");
-    /*Go to the 'config' field, and then to the 'return type' field*/
+    /*Go to the 'config' field*/
     json = json->next->next->child;
-    subitem = json->next->next;
+    /*Go to 'dimensions' field*/
+    json = json->next;
+    /*Save the variable 'return_type' and identify it*/
+    subitem = json->next;
     if(strcmp(subitem->valuestring, "int") == 0) {
-        fprintf(out, "        .response_size = %d,\n", INT_SIZE);
+        fprintf(out, "        .response_size = %d,\n", (json->valueint)*INT_SIZE);
     } else if(strcmp(subitem->valuestring, "float") == 0) {
-        fprintf(out, "        .response_size = %d,\n", FLOAT_SIZE);
+        fprintf(out, "        .response_size = %d,\n", (json->valueint)*FLOAT_SIZE);
     } else {
-        fprintf(out, "        .response_size = %d,\n", STRING_SIZE);
+        fprintf(out, "        .response_size = %d,\n", (json->valueint)*STRING_SIZE);
     }
+    /*Go back to 'update_function' field*/
+    json = json->prev;
     fprintf(out, "    },\n    .request = %s,\n", json->valuestring);
     json = json->next;
     fprintf(out, "    .dimensions = %d,\n", json->valueint);
     json = json->next->next;
     fprintf(out, "    //Unit: %s\n", json->valuestring);
-    /*Go to 'expire_group' field*/
     json = json->next;
     if(!(json->valueint)) fprintf(out, "    //Dimension_name: NULL\n");
     else fprintf(out, "    //Dimension_name: %s\n", json->valuestring);
@@ -186,7 +190,7 @@ void translate_payload (cJSON *json)
     fclose(out);
 }
 
-void main (){
+void main_nope (){
     int type_id; 
     FILE *f; 
     long len; 
