@@ -13,6 +13,7 @@
 #define STATE_RESPONSE_SIZE_FIELD 5
 #define INT_SIZE 4
 #define FLOAT_SIZE 8
+#define STRING_SIZE -1
 
 int identify_type (cJSON *json)
 {
@@ -21,7 +22,8 @@ int identify_type (cJSON *json)
     for(i = 0; i < COMMAND_TYPE_FIELD; i++) subitem = subitem->next;
     if(strcmp(subitem->valuestring, "message") == 0) return TYPE_MESSAGE;
     else if(strcmp(subitem->valuestring, "state") == 0) return TYPE_STATE;
-    else return TYPE_PAYLOAD;
+    else if(strcmp(subitem->valuestring, "payload") == 0) return TYPE_PAYLOAD;
+    else return 0;
 }
 
 void translate_message (cJSON *json)
@@ -30,12 +32,15 @@ void translate_message (cJSON *json)
     cJSON *subitem;
 
     out = fopen("printed.c", "w");
-    fprintf(out, "/*---------------------PRINTED FILE---------------------\n\n");
+    fprintf(out, "/*---------------------PRINTED FILE--------------------\n\n");
     
-    fprintf(out, "const static struct MCSCommandMessage mcs_command_message_list[] =\n{\n    {\n");
+    fprintf(out, "const static struct MCSCommandMessage "
+            "mcs_command_message_list[] =\n{\n    {\n");
     json = json->child;
     fprintf(out, "    .cmd = {\n        .name = \"%s\",\n", json->valuestring);
-    json = json->next->next;
+    json = json->next;
+    fprintf(out, "        //%s\n", json->valuestring);
+    json = json->next;
     fprintf(out, "        .nargs = %d,\n", json->valueint);
     json = json->next;
     if(json->valueint) fprintf(out, "        .raw_data = true,\n");
@@ -44,7 +49,7 @@ void translate_message (cJSON *json)
     json = json->next->next->child;
     /*Go to the response size field using a temporary variable because we will
      go over other fields. The original 'json' variable will continue to point
-     in the logical, consequential order*/
+     in the logical, sequential order*/
     subitem = json->next->next->next;
     fprintf(out, "        .response_size = %d,\n", subitem->valueint);
     fprintf(out, "    },\n    .destination = \"%s\",\n", json->valuestring);
@@ -72,7 +77,8 @@ void translate_message (cJSON *json)
     } else {
         fprintf(out, "    .destination_groups = NULL,\n");
     }
-    fprintf(out, "    }");
+    fprintf(out, "    }\n");
+    fprintf(out, "};");
     
     fprintf(out, "\n*/");
     fclose (out);
@@ -90,12 +96,14 @@ void translate_state (cJSON *json)
             " =\n{\n    {\n");
     json = json->child;
     fprintf(out, "    .cmd = {\n        .name = \"%s\",\n", json->valuestring);
-    json = json->next->next;
+    json = json->next;
+    fprintf(out, "        //%s\n", json->valuestring);
+    json = json->next;
     fprintf(out, "        .nargs = %d,\n", json->valueint);
     json = json->next;
     if(json->valueint) fprintf(out, "        .raw_data = true,\n");
     else fprintf(out, "        .raw_data = false,\n");
-    /*Go to the config field, and then to the return type field*/
+    /*Go to the 'config' field, and then to the 'return type' field*/
     json = json->next->next->child;
     subitem = json->next->next;
     if(strcmp(subitem->valuestring, "int") == 0) {
@@ -103,13 +111,18 @@ void translate_state (cJSON *json)
     } else if(strcmp(subitem->valuestring, "float") == 0) {
         fprintf(out, "        .response_size = %d,\n", FLOAT_SIZE);
     } else {
-        fprintf(out, "        .response_size = 0,\n"); /*arbitrarily long size?*/
+        fprintf(out, "        .response_size = %d,\n", STRING_SIZE);
     }
     fprintf(out, "    },\n    .request = %s,\n", json->valuestring);
     json = json->next;
     fprintf(out, "    .dimensions = %d,\n", json->valueint);
-    /*TO REVISE: 'Unit' and other unused fields, to be printed as comments?*/
-    json = json->next->next->next->next;
+    json = json->next->next;
+    fprintf(out, "    //Unit: %s\n", json->valuestring);
+    /*Go to 'expire_group' field*/
+    json = json->next;
+    if(!(json->valueint)) fprintf(out, "    //Dimension_name: NULL\n");
+    else fprintf(out, "    //Dimension_name: %s\n", json->valuestring);
+    json = json->next;
     if(json->child) {
         fprintf(out, "    .expire_group = {\n");
         json = json->child;
@@ -144,7 +157,9 @@ void translate_payload (cJSON *json)
             "list[] =\n{\n    {\n");
     json = json->child;
     fprintf(out,"    .cmd = {\n        .name = \"%s\",\n", json->valuestring);
-    json = json->next->next;
+    json = json->next;
+    fprintf(out, "        //%s\n", json->valuestring);
+    json = json->next;
     fprintf(out, "        .nargs = %d,\n", json->valueint);
     json = json->next;
     if(json->valueint) fprintf(out, "        .raw_data = true,\n");
@@ -164,8 +179,7 @@ void translate_payload (cJSON *json)
     fprintf(out, "    .arguments = \"%s\",\n", json->valuestring);
     json = json->next;
     if(!(json->valueint)) fprintf(out, "    .data = NULL,\n");
-    /*TO REVISE: Rule out this field*/
-    else fprintf(out, "    .data = /*...*/,\n");
+    else fprintf(out, "    .data = \"%s\",\n", json->valuestring);
     fprintf(out, "    },\n};");
     
     fprintf(out, "\n*/");
@@ -178,14 +192,11 @@ void main (){
     long len; 
     char *data; 
     cJSON *json;
-
-    /*For running and building purposes*/
-    printf("-------------------------Start main-------------------------\n");
     
     /*Load the json file, to choose from 'single_message', 'single_state' and
      'single_payload' depending on what to test. Keep in mind that everything
      will printed and thus overwritten in the same output file.*/
-    f = fopen("single_payload.json", "r");
+    f = fopen("single_state.json", "r");
     fseek(f, 0, SEEK_END); 
     len = ftell(f);
     fseek(f, 0, SEEK_SET);
@@ -198,10 +209,7 @@ void main (){
     if(!json) {
         printf("Error before: [%s]\n", cJSON_GetErrorPtr());
     } else {
-        printf("|| First, identify the type of command!\n");
         type_id = identify_type (json);
-        printf("|| Finished idenifying command. Result identifier: %d\n", type_id);
-        printf("|| Printing translated message\n");
         
         switch (type_id) {
             case TYPE_MESSAGE:
@@ -213,12 +221,12 @@ void main (){
             case TYPE_PAYLOAD:
                 translate_payload(json);
                 break;
+            default:
+                printf("ERROR: Command couldn't be identified.\n");
+                break;
         }
-        printf("|| Finished printing translated message\n");
     }
     
     cJSON_Delete(json);
     free(data);
-    
-    printf("\n--------------------------End main--------------------------\n");
 }
