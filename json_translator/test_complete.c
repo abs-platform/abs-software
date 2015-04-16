@@ -1,6 +1,4 @@
-/*This is a test file designed to take a single-element json, identify it, and print its equivalent 
- * in C (commented for building purposes). This will serve as a base for a future and more complex 
- * translator.*/
+/*Test for the complete json structure example*/
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -26,19 +24,16 @@ int identify_type (cJSON *json)
     else return 0;
 }
 
-void translate_message (cJSON *json)
+void translate_message (cJSON *json, FILE *out)
 {
-    FILE *out;
     cJSON *subitem;
-
-    out = fopen("printed.c", "w");
-    fprintf(out, "/*------------------------------PRINTED FILE------------------------------\n\n");
     
-    fprintf(out, "const static struct MCSCommandMessage mcs_command_message_list[] =\n{\n    {\n");
+    fprintf(out, "const static struct MCSCommandOptionsMessage mcs_command_message_list[] =\n{\n"
+            "    {\n");
     json = json->child;
     fprintf(out, "    .cmd = {\n        .name = \"%s\",\n", json->valuestring);
     json = json->next;
-    fprintf(out, "        //%s\n", json->valuestring);
+    fprintf(out, "        /*%s*/\n", json->valuestring);
     json = json->next;
     fprintf(out, "        .nargs = %d,\n", json->valueint);
     json = json->next;
@@ -47,7 +42,7 @@ void translate_message (cJSON *json)
     /*Go to the configuration field*/
     json = json->next->next->child;
     /*Go to the response size field using a temporary variable because we will go over other fields.
-     * The original 'json' variable will continue to point in the logical, sequential order*/
+     *  The original 'json' variable will continue to point in the logical, sequential order*/
     subitem = json->next->next->next;
     fprintf(out, "        .response_size = %d,\n", subitem->valueint);
     fprintf(out, "    },\n    .destination = \"%s\",\n", json->valuestring);
@@ -76,25 +71,20 @@ void translate_message (cJSON *json)
         fprintf(out, "    .destination_groups = NULL,\n");
     }
     fprintf(out, "    }\n");
-    fprintf(out, "};");
-    
-    fprintf(out, "\n*/");
-    fclose (out);
+    fprintf(out, "};\n\n");
+    fprintf(out, "#define mcs_command_message_list_size 1\n\n");
 }
 
-void translate_state (cJSON *json)
+void translate_state (cJSON *json, FILE *out)
 {
-    FILE *out;
     cJSON *subitem;
     
-    out = fopen("printed.c", "w");
-    fprintf(out, "/*------------------------------PRINTED FILE------------------------------\n\n");
-    
-    fprintf(out, "const static struct MCSCommandState mcs_command_state_list[] =\n{\n    {\n");
+    fprintf(out, "const static struct MCSCommandOptionsState mcs_command_state_list[] =\n{\n"
+            "    {\n");
     json = json->child;
     fprintf(out, "    .cmd = {\n        .name = \"%s\",\n", json->valuestring);
     json = json->next;
-    fprintf(out, "        //%s\n", json->valuestring);
+    fprintf(out, "        /*%s*/\n", json->valuestring);
     json = json->next;
     fprintf(out, "        .nargs = %d,\n", json->valueint);
     json = json->next;
@@ -104,7 +94,7 @@ void translate_state (cJSON *json)
     json = json->next->next->child;
     /*Go to 'dimensions' field*/
     json = json->next;
-    /*Save the variable 'return_type' separately to identify it*/
+    /*Save the variable 'return_type' and identify it*/
     subitem = json->next;
     if(strcmp(subitem->valuestring, "int") == 0) {
         fprintf(out, "        .response_size = %d,\n", (json->valueint) * INT_SIZE);
@@ -119,46 +109,41 @@ void translate_state (cJSON *json)
     json = json->next;
     fprintf(out, "    .dimensions = %d,\n", json->valueint);
     json = json->next->next;
-    fprintf(out, "    //Unit: %s\n", json->valuestring);
+    fprintf(out, "    /*Unit: %s/\n", json->valuestring);
     json = json->next;
-    if(!(json->valueint)) fprintf(out, "    //Dimension_name: NULL\n");
-    else fprintf(out, "    //Dimension_name: %s\n", json->valuestring);
+    if(!(json->valueint)) fprintf(out, "    /*Dimension_name: NULL*/\n");
+    else fprintf(out, "    /*Dimension_name: %s*/\n", json->valuestring);
     json = json->next;
     if(json->child) {
         fprintf(out, "    .expire_group = {\n");
         json = json->child;
         subitem = json->child;
-        fprintf(out, "            { .group = %s, .max_espire = %d },\n", 
-                subitem->string, subitem->valueint);
+        fprintf(out, "            { .group = %s, .max_espire = %d },\n", subitem->string, 
+                subitem->valueint);
         while(json->next) {
             json = json->next;
             subitem = json->child;
-            fprintf(out, "            { .group = %s, .max_espire = %d },\n", 
-                    subitem->string, subitem->valueint);
+            fprintf(out, "            { .group = %s, .max_espire = %d },\n", subitem->string, 
+                    subitem->valueint);
         }       
     } else {
         fprintf(out, "    .expire_group = NULL,\n");  
     }
-    fprintf(out, "    },\n};");
-    
-    fprintf(out, "\n*/");
-    fclose(out);
+    fprintf(out, "    },\n};\n\n");
+    fprintf(out, "#define mcs_command_state_list_size 1\n\n");
 }
 
-void translate_payload (cJSON *json)
+void translate_payload (cJSON *json, FILE *out)
 {
     int i;
-    FILE *out;
     cJSON *subitem;
-
-    out = fopen("printed.c", "w");
-    fprintf(out, "/*------------------------------PRINTED FILE------------------------------\n\n");
     
-    fprintf(out, "const static struct MCSCommandPayload mcs_command_payload_list[] =\n{\n    {\n");
+    fprintf(out, "const static struct MCSCommandOptionsPayload mcs_command_payload_list[] =\n{\n"
+            "    {\n");
     json = json->child;
     fprintf(out,"    .cmd = {\n        .name = \"%s\",\n", json->valuestring);
     json = json->next;
-    fprintf(out, "        //%s\n", json->valuestring);
+    fprintf(out, "        /*%s*/\n", json->valuestring);
     json = json->next;
     fprintf(out, "        .nargs = %d,\n", json->valueint);
     json = json->next;
@@ -180,23 +165,22 @@ void translate_payload (cJSON *json)
     json = json->next;
     if(!(json->valueint)) fprintf(out, "    .data = NULL,\n");
     else fprintf(out, "    .data = \"%s\",\n", json->valuestring);
-    fprintf(out, "    },\n};");
+    fprintf(out, "    },\n};\n\n");
     
-    fprintf(out, "\n*/");
-    fclose(out);
+    fprintf(out, "#define mcs_command_payload_list_size 1\n\n#endif");
 }
 
-void main (){
-    int type_id; 
-    FILE *f; 
+void main() {
+    int type_id, i; 
+    FILE *f, *out; 
     long len; 
     char *data; 
-    cJSON *json;
+    cJSON *json, *single_command;
+
+    /*For running and building purposes*/
+    printf("-------------------------Start main-------------------------\n");
     
-    /*Load the json file, to choose from 'single_message', 'single_state' and 'single_payload' 
-     * depending on what to test. Keep in mind that everything will printed and thus overwritten 
-     * in the same output file.*/
-    f = fopen("single_state.json", "r");
+    f = fopen("json_example_complete.json", "r");
     fseek(f, 0, SEEK_END); 
     len = ftell(f);
     fseek(f, 0, SEEK_SET);
@@ -209,24 +193,62 @@ void main (){
     if(!json) {
         printf("Error before: [%s]\n", cJSON_GetErrorPtr());
     } else {
-        type_id = identify_type (json);
+        out = fopen("printed.c", "w");
+        json = json->child->child;
         
+        /*Print all he headers*/
+        fprintf(out, "/* AUTOGENERATED. DO NOT MODIFY */\n\n"
+                "#ifndef __AUTO_MCS_H\n#define __AUTO_MCS_H\n\n"
+                "#ifndef __MCS_H\n#error \"This header should not be included "
+                "directly. Include mcs.h\"\n#endif\n\n"
+                "typedef enum MCSCommand {\n"
+                "    MCS_MESSAGE_PROCMAN_START     = 0\n"
+                "    MCS_STATE_TEMPERATURE_ARDUINO = 65536 , /* 0 x10000 */\n"
+                "    MCS_PAYLOAD_ARDUINO_GET_PIN   = 131072 , /* 0 x20000 */\n"
+                "} MCSCommand;\n\n"
+        );
+        
+        /*Access the first single command from the array*/
+        single_command = json->child;
+        printf("|| First, identify the command!\n");
+        type_id = identify_type(json);
+        printf("|| Identified. Type is: %d\n", type_id);
         switch (type_id) {
             case TYPE_MESSAGE:
-                translate_message(json);
+                translate_message(json, out);
                 break;
             case TYPE_STATE:
-                translate_state(json);
+                translate_state(json, out);
                 break;
             case TYPE_PAYLOAD:
-                translate_payload(json);
-                break;
-            default:
-                printf("ERROR: Command couldn't be identified.\n");
+                translate_payload(json, out);
                 break;
         }
+        /*Access and translate its siblings (if any)*/
+        while (json->next){
+            json = json->next;
+            single_command = json->child;
+            printf("|| First, identify the command!\n");
+            type_id = identify_type(json);
+            printf("|| Identified. Type is: %d\n", type_id);
+            switch(type_id) {
+                case TYPE_MESSAGE:
+                    translate_message(json, out);
+                    break;
+                case TYPE_STATE:
+                    translate_state(json, out);
+                    break;
+                case TYPE_PAYLOAD:
+                    translate_payload(json, out);
+                    break;
+            }
+        }
+        fclose(out);
     }
     
     cJSON_Delete(json);
     free(data);
+    
+    printf("\n--------------------------End main--------------------------\n");
 }
+
