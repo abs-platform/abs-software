@@ -15,51 +15,59 @@ later. Anything that is left for later is prone to not being done.
 
 2. Line width
 --------------------------------------------------------------------------------
-Line width is 80 characters; not longer. Code, and especially patches, is much 
-more readable if limited to a sane line length. This length also makes it easier
-to embed code in DIN-A4 documents.
+Line width should be reasonably short to allow embedding the sources in DIN-A4
+documents, GitHub web-based code viewers, and to open it in a 13" full-screen 
+editor. Maintaining a readable, homogeneous width is more than recommended, 
+although an exact number of characters is not defined. As a general guideline, 
+lines should not be longer than 120 characters and splitting should not occur at 
+less than 80 characters. 
 
 
 3. Whitespace
 --------------------------------------------------------------------------------
- - Indents are four spaces. Tabs are forbidden for identation purposes unless 
-   they are a language or syntax request (e.g. Makefiles).
- - Separate parameters in functions with one space:
+ 1. Indents are four spaces. Tabs are forbidden for identation purposes unless 
+    they are a language or syntax request (e.g. Makefiles).
+ 2. Separate parameters in functions with one space:
         function(param1, param2, param3);
- - Opeands and operators must be separated with (at least) one space at each 
-   side of the operation:
+ 3. Opeands and operators must be separated with (at least) one space at each 
+    side of the operation:
         b = a + 1;
- - Extra spaces can be optionally added to improve readability only when several 
-   operations can be aligned together. In this situation, the alignment should
-   be ideally done with the equal (=) symbol:
+ 4. Extra spaces can be optionally added to improve readability only when  
+    several operations can be aligned together. In this situation, the alignment
+    should be ideally done with the equal (=) symbol:
         b    = a + 1;
         c_2  = b * 4;
         c_2 *= a;
-<<<< Options:
-------------- Marc:
- - Put spaces between conditional statements and the first parentheses:
-        while (x > 0)
-------------- Carles:
->>>>
- - Do not leave whitespace dangling off the ends of lines.
- - Leave one empty line between logical groups of instructions.
- - Leave one empty line between functions.
+ 5. Extra spaces are not allowed after '*' in C pointers. The 
+    purpose of this rule is to clearly distinguish pointers from scalar 
+    products. Example:
+        int  *a;         /* Ok.    */
+        int*  a;         /* Wrong. */ 
+        int * a;         /* Wrong. */
+        char *a, *b, *c; /* Ok    */
+        b = *a;          /* Ok.    */
+        b = * a;         /* Wrong. */
+    Exception: function headers can have whitespace before and after the '*'.
+ 6. Do not leave whitespace dangling off the ends of lines.
+ 7. Leave one empty line between logical groups of instructions.
+ 8. Leave one empty line between functions.
+ 9. Leave (at least) one empty line at the end of a file.
 
 
 4. Block structure
 --------------------------------------------------------------------------------
- - Braced blocks of code must be properly indented.
- - Every indented statement is braced; even if the block contains just one
-   statement. 
- - Flow control statements must not contain spaces between the name and 
-   conditions/arguments.
-        if(condition)   /* Wrong.   */
-        if (condition)  /* Correct. */
- - Blocks containing a single statement can skip the braces if and only if they 
-   fit in a single line, e.g.: 
+ 1. Braced blocks of code must be properly indented.
+ 2. Every indented statement is braced; even if the block contains just one
+    statement. 
+ 3. Flow control statements must not contain spaces between the name and 
+    conditions/arguments.
+        if(condition)   /* Correct. */
+        if (condition)  /* Wrong.   */
+ 4. Blocks containing a single statement can skip the braces if and only if they 
+    fit in a single line, e.g.: 
         if(condition) op = 42;
-   The purpose of this rule is only to shrink the SLOC number and should *never* 
-   worsen readability. Nesting is not allowed without braces:
+    The purpose of this rule is only to shrink the SLOC number and should 
+    *never* worsen readability. Nesting is not allowed without braces:
         for(int i = 0; i < N; i++)          /*          */
             for(int j = 0; j < N; j++)      /* Wrong.   */
                 for(int k = 0; k < N; k++)  /*          */
@@ -74,13 +82,13 @@ to embed code in DIN-A4 documents.
                 for(int i = 0; i < N; i++) single_line();   /* Correct. */
             }
         }
- - For flow control statements (if, while, for, switch):
-     - The opening brace must be in the same line that contains the flow control
-       statement and must be preceeded by a space; 
-     - the closing brace is in a new line; 
-     - the "} else ... {" statement is in a single new line;
-     - braces are separated one space from the rest of the line (if any).
-     - Example:
+ 5. For flow control statements (if, while, for, switch):
+     a. The opening brace must be in the same line that contains the flow 
+        control statement and must be preceeded by a space; 
+     b. the closing brace is in a new line; 
+     c. the "} else ... {" statement is in a single new line;
+     d. braces are separated one space from the rest of the line (if any).
+        Example:
         if(a == 5) {                /* One space before "{".                */
             printf("a was 5.\n");   /* Identation is applied.               */
         } else if(a == 6) {         /* Padding spaces next to braces.       */
@@ -91,11 +99,11 @@ to embed code in DIN-A4 documents.
         for(i = 0; i < 3; i++) {    /* Braces are optional here because the */
             printf("i is %d\n", i); /* inner part of the block is short     */
         }                           /* enough to write it on a single line. */
- - Functions:
-    - Both opening and closing braces must be written in a new line.
-    - No blank lines can be included right after or before the opening and 
-      closing braces, respectively.
-    - Example:
+ 6. Functions, classes and methods:
+    a. Both opening and closing braces must be written in a new line.
+    b. No blank lines can be included right after or before the opening and 
+       closing braces, respectively.
+       Example:
         int a_function(void)
         {                   /* New line.                                    */
             do_something(); /* No space between prev. line and this one.    */
@@ -103,8 +111,9 @@ to embed code in DIN-A4 documents.
             return 0;       /* No space after the return line.              */
         }                   /* New line.                                    */
 
- - Switch control blocks must be indented setting the "case ...:" and "default:"
-   keywords at a different level than the body of the condition. Example:
+ 7. Switch control blocks must be indented setting the "case ...:" and 
+    "default:" keywords at a different level than the body of the condition. 
+    Example:
         switch(var) {                           /* Same rules.              */
             case 1:                             /* 1 indent. step applied.  */
             case 2:
@@ -118,58 +127,91 @@ to embed code in DIN-A4 documents.
                 printf("Var is not 1, 2, 3 or 4\n");
                 break;
         }
+ 8. Java/C++ classes must be defined in single files (i.e. defining more than 
+    one class in a file is forbidden).
 
 
 5. Naming
 --------------------------------------------------------------------------------
- - Variables and functions are lower_case_with_underscores; easy to type and
-   read.
- - Structured and enum type names are in CamelCase; harder to type but standing
-   out.
- - Scalar type names are lower_case_with_underscores_ending_with_a_t, like the
-   POSIX uint64_t and similar families.
- - Constants are UPPER_CASE_WITH_UNDERSCORES; to stand out.
- - Global symbols include the domain of which they are part:
+ 1. Names have to be lexically sufficient and must never induce to a wrong 
+    understanding of the value/functionality. 
+ 2. The use of common words such as "aux", "error", "device", "my_function"... 
+    is discouraged in general, though not forbidden. However, their usage is  
+    indeed restricted to local scopes (i.e. global variables/functions must 
+    never be named using those common words)
+ 3. Variables are lower_case_with_underscores; easy to type and read (for all 
+    languages: Java, C, Python...)
+ 4. In C/C++ and similar languages: functions are lower_case_with_underscores.
+ 5. In Java: methods and class names are in CamelCase.
+ 6. Structured and enum type names are in CamelCase; harder to type but standing
+    out.
+ 7. Constants are UPPER_CASE_WITH_UNDERSCORES; to stand out.
+ 8. Global symbols include the domain of which they are part:
         syscore_init_start
         syscore_init_clean
         syscore_power_flag
- - When wrapping standard library functions, use the prefix abs_ to alert
-   readers that they are seeing a wrapped version; otherwise avoid this prefix:
+ 9. When wrapping standard library functions, use the prefix abs_ to alert
+    readers that they are seeing a wrapped version; otherwise avoid this prefix:
         abs_malloc
+10. Files have to be named using the following structure:
+        <codename>[_<extra>].<ext>
+    Where:
+     <codename> is the project's abbreviation for the program name (e.g. "eps").
+        <extra> is an optional sub-name for the file (e.g. "driver").
+          <ext> is the file extension.
+    For C/C++ programs, two files are always compulsory: <codename>.c and 
+    <codename>.h. Additional files in that case would be, e.g.: <codename>.conf,
+    <codename>_<extra1>.c, <codename>_<extra2>.c, and so on. 
+    Although OO programs are excluded from this rule, the must always include,
+    at least, one source file (.java or .cpp) which name matches the codename of
+    the program. 
 
 
 6. Declarations
 --------------------------------------------------------------------------------
- - Mixed declarations (i.e. interleaving statements and declarations within 
-   blocks) are not allowed; declarations should be at the beginning of blocks. 
-   In other words, the code should not generate warnings if using GCC's
-   -Wdeclaration-after-statement option.
- - Global variables initialization should be ideally performed within the body 
-   of the entry point (main) or an initialization handler. Avoid initializing a
-   global variable outside a function scope and at several source files. Try to 
-   use constants instead of hardcoded expressions when possible. 
+ 1. Mixed declarations (i.e. interleaving statements and declarations within 
+    blocks) are not allowed; declarations should be at the beginning of blocks. 
+    In other words, the code should not generate warnings if using GCC's
+    -Wdeclaration-after-statement option.
+ 2. Global variables initialization should be ideally performed within the body 
+    of the entry point (main) or an initialization handler. Avoid initializing a
+    global variable outside a function scope and at several source files. Try to 
+    use constants instead of hardcoded expressions when possible.
+ 3. In C, new types must always be defined in the *global* namespace. Moreover, 
+    for coherency and uniformity, structs must be written using the name at the 
+    beginning AND at the end. Example:
+        typedef struct S { int x; } S;  /* Correct. Preferrable option.       */
+        typedef struct S { int x; };    /* Wrong.                             */
+        typedef struct { int x; } S;    /* Wrong.                             */
+        struct S { int x; };            /* Wrong, unless used with the next 
+                                           line.                              */
+        typedef struct S S;             /* Requires `struct S` to be defined. */
+        /* The use of the symbol 'S' is therefore restricted anywhere else in 
+           this program. */
+         
+        
 
 
 7. Static and Extern
 --------------------------------------------------------------------------------
- - All data global for one file, and all auxiliar functions to that file must
-   have the static keyword. Do not make global what it is not necessary.
- - Global functions and variables must be declared in the header file using the 
-   "extern" modificatior. Their definition must be coded in the source files 
-   where they are used (except functions). Example:
+ 1. All data global for one file, and all auxiliar functions to that file must
+    have the static keyword. Do not make global what it is not necessary.
+ 2. Global functions and variables must be declared in the header file using the 
+    "extern" modificatior. Their definition must be coded in the source files 
+    where they are used (except functions). Example:
         /* ---- example.h: -----*/
         extern int example_global;
         extern char state_global;
         extern void my_function();
         
-        /* ---- example1.c: ----*/
+        /* ---- example_file1.c: ----*/
         int example_global;
         static private_function()
         {
             /* Function that uses example_global varaible. */
         }
         
-        /* ---- example2.h: ----*/
+        /* ---- example_file2.c: ----*/
         char state_global;
         void my_function()
         {
@@ -179,24 +221,71 @@ to embed code in DIN-A4 documents.
         
 8. Headers
 --------------------------------------------------------------------------------
- - Each source file must have one single header file. Their names must match 
-   (except in the extension) and the header file should include all libraries
-   and external headers. The source file should contain only one #include 
-   directive.
- - Header files must contain all constants, macros, type definitions, and global
-   function prototypes and variables. 
- - Header files must have a conditional compilation with a descriptive name 
-   given its domain and file name, and finish with a _H:
+ 1. Each source file must have one single header file. Their names must match 
+    (except in the extension) and the header file should include all libraries
+    and external headers. The source files should contain only one #include 
+    directive (see 5.10 for more information).
+ 2. Header files must contain ALL constants, macros, type definitions, and
+    global function prototypes and variables. The preferred header structure is
+    as follows:
+        /* File header (generic comment). */
+        
+        #ifndef __FILENAME_H
+        #define __FILENAME_H
+        
+        /* INCLUDES SECTION ***************************************************/
+        /* -- Standard C libraries: ----------------------------------------- */
+        #include <stdlib.h>     /* Standard C library.                        */
+        #include <stdio.h>      /* For general purpose I/O operations.        */
+        #include <stdarg.h>     /* For variable length arguments.             */
+        #include <string.h>     /* For str* functions.                        */
+        #include <....h>        /* Description ...                            */         
+        /* -- ABS libraries: ------------------------------------------------ */
+        #include <abs/abs.h>    /* Meta header-file for configuration.        */
+        #include <abs/log.h>    /* Log and Fileslog libraries.                */
+        #include <abs/....h>    /* Description ...                            */         
+        /* -- Other libraries: ---------------------------------------------- */
+        #include "....h"        /* Description ...                            */
+        #include <....h>        /* Description ...                            */
+                
+        /* CONSTANTS and MACROS SECTION ***************************************/
+        #define MAX_LINE_SIZE   30 
+        #define MAX(a,b)        (a > b ? a : b)
+        #define ...             ...
+        
+        /* TYPES SECTION ******************************************************/
+        typedef enum EnumName { A, B, C, ... };
+        typedef struct StructName1 {
+            ...
+        } StructName1;
+        
+        /* GLOBAL VARIABLES SECTION *******************************************/
+        extern int         variable1;
+        extern int         variable2;
+        extern char        *variable3;
+        extern StructName1 data;
+        extern EnumName    value;
+        
+        /* GLOBAL FUNCTION PROTOTYPES *****************************************/
+        extern void my_function1();
+        extern void my_function2();
+        extern void my_function3();
+        extern int *my_function4();
+        extern ... 
+        
+        #endif        
+ 3. Header files must have a conditional compilation with a descriptive name 
+    given its domain and file name, and finish with a _H:
         #ifndef APPMOD_H
         #define APPMOD_H
         ...
         #endif
- - Only include what is needed. Avoid including what it is not needed (i.e. 
-   unused libraries, old headers...)
- - C/C++ macros and complex constants (i.e. those which are calculated at 
-   compile-time) are there to save time, reduce lines of code, improve 
-   readability and mitigate typo-like errors. Use them with care, though, and 
-   don't forget to wrap complex expressions with parentheses. Example:
+ 4. Only include what is needed. Avoid including what it is not needed (i.e. 
+    unused libraries, old headers...)
+ 5. C/C++ macros and complex constants (i.e. those which are calculated at 
+    compile-time) are there to save time, reduce lines of code, improve 
+    readability and mitigate typo-like errors. Use them with care, though, and 
+    don't forget to wrap complex expressions with parentheses. Example:
         #define A   3
         #define B   4
         /* ---- case 1: */
@@ -209,28 +298,28 @@ to embed code in DIN-A4 documents.
 
 9. Comments and in-code documentation
 --------------------------------------------------------------------------------
- - Use in-code comments rationally. There's no need to comment each and every 
-   line but it is very important to comment on decisions made, obscure hacks or 
-   other parts which might be difficult to understand.
- - Always surround the comments with /* */. Do not use other methods such as //.
- - Comments are English sentences: although short and clear, they must be 
-   grammatically correct. Do use punctuation (commas, full stops, parentheses 
-   and hyphens) and a proper language (e.g. avoid slang words, use technical 
-   expressions).
- - Functions and files must be documented according to the JavaDoc (for Java 
-   code), PlDoc (for Prolog code) and Doxygen (for the rest of the languages)
-   specifications.
+ 1. Use in-code comments rationally. There's no need to comment each and every 
+    line but it is very important to comment on decisions made, obscure hacks or 
+    other parts which might be difficult to understand.
+ 2. Always surround the comments with /* */. Do not use other methods like //.
+ 3. Comments are English sentences: although short and clear, they must be 
+    grammatically correct. Do use punctuation (commas, full stops, parentheses 
+    and hyphens) and a proper language (e.g. avoid slang words, use technical 
+    expressions).
+ 4. Functions and files must be documented according to the JavaDoc (for Java 
+    code), PlDoc (for Prolog code) and Doxygen (for the rest of the languages)
+    specifications.
 
 
 11. Reliability, debug easiness and flexibility
 --------------------------------------------------------------------------------
- - Based on Holzmann's "The Power of Ten: Rules for Developing Safety Critical 
-   Code", NASA/JPL Laboratory for Reliable Software, available at
-   <http://spinroot.com/gerard/pdf/Power_of_Ten.pdf>, the following rules should 
-   be applied to the software developed for ABS. Their rationale is detailed in 
-   the aforementioned paper. (TODO, modify/remove some of these rules if 
-   necessary)
-        1.  Restrict all code to very simple control flow constructs –do not use 
+ 1. Based on Holzmann's "The Power of Ten: Rules for Developing Safety Critical 
+    Code", NASA/JPL Laboratory for Reliable Software, available at
+    <http://spinroot.com/gerard/pdf/Power_of_Ten.pdf>, the following rules  
+    should be applied to the software developed for ABS. Their rationale is  
+    detailed in the aforementioned paper. (TODO, modify/remove some of these 
+    rules if necessary)
+        i.  Restrict all code to very simple control flow constructs –do not use 
             goto statements, setjmp or longjmp constructs, and direct or 
             indirect recursion. 
             Exception: "goto" statements can be used to implement cleaning 
@@ -251,23 +340,23 @@ to embed code in DIN-A4 documents.
                     undo_something(1);
                     return error;
                 }
-        2.  All loops must have a fixed upper-bound. It must be trivially
+       ii.  All loops must have a fixed upper-bound. It must be trivially
             possible for a checking tool to prove statically that a preset 
             upper-bound on the number of iterations of a loop cannot be 
             exceeded. If the loop-bound cannot be proven statically, the rule is 
             considered violated.
-        3.  Reduce the number of dynamic allocations to the minimum possible. If
+      iii.  Reduce the number of dynamic allocations to the minimum possible. If
             the size of memory blocks can be predicted (at compile time), it is
             compulsory to declare the memory region size statically.
             Pointers are allowed only when there's a clear justification for 
             them. If a section initializes a memory block (i.e. calls some of 
             the malloc() family functions) it is strictly mandatory to include 
             complementary free calls. 
-        4.  No function should be longer than what can be printed on a single 
+       iv.  No function should be longer than what can be printed on a single 
             sheet of paper in a standard reference format with one line per 
             statement and one line per declaration. Typically, this means no 
             more than about 100 lines of code per function.
-        5.  The assertion density of the code should average to a minimum of two 
+        v.  The assertion density of the code should average to a minimum of two 
             assertions per function. Assertions are used to check for anomalous 
             conditions that should never happen in real-life executions. 
             Assertions must always be side-effect free and should be defined as 
@@ -295,15 +384,15 @@ to embed code in DIN-A4 documents.
             tst_debugging is turned into a no-op, and  the assertion turns into 
             a pure Boolean test that enables error recovery from anomolous 
             behavior.
-        7.  The return value of non-void functions must be checked by each 
+       vi.  The return value of non-void functions must be checked by each 
             calling function, and the validity of parameters must be checked 
             inside each function.
-        9.  The use of pointers should be restricted. Specifically, no more than 
+      vii.  The use of pointers should be restricted. Specifically, no more than 
             one level of dereferencing is allowed. Pointer dereference 
             operations may not be hidden in macro definitions or inside typedef 
             declarations. Function pointers are only permitted when the have a
             direct and clear justification.
-        10. All code must be compiled, from the first day of development, with 
+     viii.  All code must be compiled, from the first day of development, with 
             all compiler warnings enabled at the compiler’s most pedantic 
             setting. All code must compile with these setting without any 
             warnings. All code must be checked daily with at least one, but 
@@ -314,11 +403,12 @@ to embed code in DIN-A4 documents.
 
 12. Final remarks
 --------------------------------------------------------------------------------
- - Any code modifications accepted into the master tree must be compliant with 
-   these sets of rules and must compile without warnings using the -Wall option.
- - New code must be provided together with a Makefile. Including README 
-   temporary files within certain folders is allowed (and recommended) to save 
-   time (and headaches) to the rest of the team.
+ 1. Any code modifications accepted into the master tree must be compliant with 
+    these sets of rules and must compile without warnings using the -Wall 
+    option.
+ 2. New code must be provided together with a Makefile. Including README 
+    temporary files within certain folders is allowed (and recommended) to save 
+    time (and headaches) to the rest of the team.
    
 
 
