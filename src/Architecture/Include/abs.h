@@ -60,22 +60,9 @@
 
 /* End of error codes */
 
-static inline void *abs_malloc0(size_t size)
-{
-    void *ptr;
-
-    ptr = malloc(size);
-    memset(ptr, 0, size);
-    return ptr;
-}
-
-static inline void *abs_malloccpy(const void *src, size_t size)
-{
-    void *ptr;
-
-    ptr = malloc(size);
-    memcpy(ptr, src, size);
-    return ptr;
-}
+void *abs_malloc0(size_t size);
+void *abs_malloccpy(const void *src, size_t size);
+int abs_write(int fd, char *buffer, int buf_size);
+int abs_read(int fd, char *buffer, int buf_size, int timeout);
 
 #endif
