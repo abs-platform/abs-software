@@ -10,21 +10,19 @@ bin-release/
 # should NOT be excluded as they contain compiler settings and other important
 # information for Eclipse / Flash Builder.
 
-# Autoconf stuff
-/.autom4te.cache
-/aclocal.m4
-/config.status
-/libtool
-Makefile
-Makefile.in
-.deps
-.libs
+# Log files
 *.log
+*.old
 
 # Object files
 *.o
-*.la
-*.lo
+*.d
+*.so
 
 # SDB
 /src/Architecture/SDB/sdb
+
+# Auto generated files
+auto_*
+configure.mk
+
