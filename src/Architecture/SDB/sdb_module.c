@@ -6,20 +6,21 @@
 #include <sdb.h>
 #include "sdb_private.h"
 
-/* #define DEBUG 1 */
-
-struct SDBModule sdb_module[SDB_MODULE_MAX];
-unsigned int sdb_module_last;
+SDBModule sdb_module[SDB_MODULE_MAX];
+unsigned int sdb_module_last = 0;
 pthread_mutex_t sdb_module_lock;
 
 static void reject_pkt_socket(unsigned int id)
 {
     MCSPacket *pkt;
 
+    pthread_mutex_lock(&sdb_module_lock);
     if(id >= sdb_module_last) {
+        pthread_mutex_unlock(&sdb_module_lock);
         printf_dbg("Index not valid\n");
         return;
     }
+    pthread_mutex_unlock(&sdb_module_lock);
 
     pkt = mcs_read_command(sdb_module[id].rfd, sdb_module[id].wfd);
     mcs_free(pkt);
@@ -44,7 +45,10 @@ static void process_pkt_sdb(unsigned int my_id)
     }
 
     pkt = sdb_module_read_mcs_packet(my_id, -1);
-    /* Supposing packet is already checked */            
+    if(pkt == NULL) {
+        printf_dbg("Packet is wrong (although it arrived to this stage)\n");
+    }
+
     mcs_write_command(pkt, sdb_module[my_id].wfd);
     mcs_free(pkt);
 
@@ -125,14 +129,17 @@ static void process_pkt_message(const MCSPacket *pkt, unsigned int my_id)
         dest_name = pkt->dest;
     }
 
-    for(i = 0; i < sdb_module_last; ++i) {
+    pthread_mutex_lock(&sdb_module_lock);
+    list_num = sdb_module_last;
+    pthread_mutex_unlock(&sdb_module_lock);
+    for(i = 0; i < list_num; ++i) {
         if(strcmp(dest_name, sdb_module[i].name) == 0) {
             dest_index = i;
             break;
         }
     }
 
-    if(i == sdb_module_last) {
+    if(i == list_num) {
         printf_dbg("Non valid destination\n");
         mcs_write_command_and_free(mcs_err_packet(EBADMODID),
                                                     sdb_module[my_id].wfd);
@@ -169,7 +176,7 @@ static void process_pkt_state(const MCSPacket *pkt, unsigned int my_id)
 {
     unsigned int i;
     size_t list_num;
-    size_t data_size;
+    int data_size;
     void *data;
     const struct MCSCommandOptionsStatePerms *perms;
 
@@ -203,9 +210,15 @@ static void process_pkt_state(const MCSPacket *pkt, unsigned int my_id)
 
     data_size = mcs_command_state_list[pkt->cmd].cmd.response_size;
     data = mcs_command_state_list[pkt->cmd].request(pkt);
-    /* Send response */
-    mcs_write_command_and_free(mcs_ok_packet_data(data, data_size),
-                                                    sdb_module[my_id].wfd);
+    if(data_size == -1) {
+        mcs_write_command_and_free(
+                            mcs_ok_packet_data(data, strlen((char *)data)),
+                            sdb_module[my_id].wfd);
+    } else {
+        /* Send response */
+        mcs_write_command_and_free(mcs_ok_packet_data(data, data_size),
+                                                        sdb_module[my_id].wfd);
+    }
     free(data);
 }
 
@@ -232,29 +245,42 @@ static void process_pkt_payload(const MCSPacket *pkt, unsigned int my_id)
     mcs_free(pkt_res);
 }
 
+static void sdb_module_clean(void *arg)
+{
+    unsigned int my_id;
+
+    my_id = *((unsigned int *)arg);
+    close(sdb_module[my_id].rfd);
+    if(sdb_module[my_id].wfd != sdb_module[my_id].rfd) {
+        close(sdb_module[my_id].wfd);
+    }
+}
+
 void sdb_module_init(int rfd, int wfd)
 {
-    unsigned int id;
+    unsigned int *id;
 
     if(rfd < 0 || wfd < 0) {
         printf_dbg("File descriptors are not valid\n");
         goto error_ret;
     }
 
-    id = sdb_module_last;
-
-    sdb_module[id].rfd = rfd;
-    sdb_module[id].wfd = wfd;
-
+    id = malloc(sizeof(*id));
     pthread_mutex_lock(&sdb_module_lock);
+    *id = sdb_module_last;
     sdb_module_last++;
     pthread_mutex_unlock(&sdb_module_lock);
 
-    if(pthread_create(&sdb_module[id].thread_id, NULL,
-                                            sdb_module_thread, &id) < 0) {
+    sdb_module[*id].rfd = rfd;
+    sdb_module[*id].wfd = wfd;
+
+    if(pthread_create(&sdb_module[*id].thread_id, NULL,
+                                            sdb_module_thread, id) < 0) {
         printf_dbg("Error creating thread\n");
         goto error_ret;
     }
+
+    return;
 
 error_ret:
     close(rfd);
@@ -264,13 +290,17 @@ error_ret:
 int sdb_module_write_mcs_packet(const MCSPacket *pkt, unsigned int to,
                                                         unsigned int from)
 {
+    void *pos_pkt;
     void *pos;
 
+    pthread_mutex_lock(&sdb_module_lock);
     if(to >= sdb_module_last ||
                         (from > sdb_module_last && from != SDB_USB_ID)) {
+        pthread_mutex_unlock(&sdb_module_lock);
         printf_dbg("Index not valid\n");
         return -1;
     }
+    pthread_mutex_unlock(&sdb_module_lock);
 
     if(sizeof(*pkt) + pkt->nargs + pkt->data_size > SDB_MODULE_DATA_SIZE) {
         printf_dbg("Data region is too small\n");
@@ -287,7 +317,8 @@ int sdb_module_write_mcs_packet(const MCSPacket *pkt, unsigned int to,
     memcpy(pos, &from, sizeof(from));
     pos += sizeof(from);
 
-    memcpy(pos, pkt, sizeof(*pkt));
+    pos_pkt = pos;
+    memcpy(pos_pkt, pkt, sizeof(*pkt));
     pos += sizeof(*pkt);
 
     /*
@@ -296,19 +327,19 @@ int sdb_module_write_mcs_packet(const MCSPacket *pkt, unsigned int to,
      */
     if(pkt->dest != NULL) {
         memcpy(pos, pkt->dest, strlen(pkt->dest) + 1);
-        ((MCSPacket *)sdb_module[to].data)->dest = pos;
+        ((MCSPacket *)pos_pkt)->dest = pos;
         pos += strlen(pkt->dest) + 1;
     }
 
     if(pkt->nargs != 0) {
         memcpy(pos, pkt->args, pkt->nargs);
-        ((MCSPacket *)sdb_module[to].data)->args = pos;
+        ((MCSPacket *)pos_pkt)->args = pos;
         pos += pkt->nargs;
     }
 
     if(pkt->data_size != 0) {
         memcpy(pos, pkt->data, pkt->data_size);
-        ((MCSPacket *)sdb_module[to].data)->data = pos;
+        ((MCSPacket *)pos_pkt)->data = pos;
     }
 
     sdb_module[to].data_valid = true;
@@ -324,12 +355,14 @@ MCSPacket *sdb_module_read_mcs_packet(unsigned int my_id, int from)
     unsigned int id;
     MCSPacket *pkt;
 
-    if(my_id >= sdb_module_last || from < -1 ||
-            ((unsigned int)from >= sdb_module_last &&
-            (unsigned int)from != SDB_USB_ID)) {
+    pthread_mutex_lock(&sdb_module_lock);
+    if(my_id >= sdb_module_last || (from >= 0 && from != SDB_USB_ID &&
+                        (unsigned int)from >= sdb_module_last)) {
+        pthread_mutex_unlock(&sdb_module_lock);
         printf_dbg("Index not valid\n");
         return NULL;
     }
+    pthread_mutex_unlock(&sdb_module_lock);
 
     while(!sdb_module[my_id].data_valid) {
         pthread_cond_wait(&sdb_module[my_id].cond_var, &sdb_module[my_id].lock);
@@ -346,17 +379,36 @@ MCSPacket *sdb_module_read_mcs_packet(unsigned int my_id, int from)
 
     /* Leave a gap for the first element, the id from the sender */
     pkt = abs_malloccpy(sdb_module[my_id].data + sizeof(unsigned int),
-                                                                sizeof(pkt));
+                                                                sizeof(*pkt));
     if(pkt->dest != NULL) {
         pkt->dest = abs_malloccpy(pkt->dest, strlen(pkt->dest));    
     }
 
-    pkt->args = abs_malloccpy(pkt->args, pkt->nargs);
-    pkt->data = abs_malloccpy(pkt->data, pkt->data_size);
+    if(pkt->nargs != 0) {
+        pkt->args = abs_malloccpy(pkt->args, pkt->nargs);
+    }
+    if(pkt->data_size != 0) {
+        pkt->data = abs_malloccpy(pkt->data, pkt->data_size);
+    }
 
     sdb_module[my_id].data_valid = false;
 
     return pkt;
+}
+
+void sdb_module_cancel_all(void)
+{
+    unsigned int list_size;
+    int i;
+
+    pthread_mutex_lock(&sdb_module_lock);
+    list_size = sdb_module_last;
+    pthread_mutex_unlock(&sdb_module_lock);
+
+    for(i = 0; i < (int)list_size; ++i) {
+        pthread_cancel(sdb_module[i].thread_id);
+        pthread_join(sdb_module[i].thread_id, NULL);
+    }
 }
 
 void *sdb_module_thread(void *arg)
@@ -365,9 +417,16 @@ void *sdb_module_thread(void *arg)
     unsigned int my_id;
     unsigned int dest_index;
     int i;
+    size_t text_size;
     char *group;
 
     my_id = *((unsigned int *)arg);
+
+    pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
+    pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
+    pthread_cleanup_push(sdb_module_clean, arg);
+
+    printf_dbg("Thread %d has been created! Welcome on board!\n", my_id);
 
     pthread_mutex_init(&sdb_module[my_id].lock, NULL);
     pthread_cond_init(&sdb_module[my_id].cond_var, NULL);
@@ -399,8 +458,10 @@ void *sdb_module_thread(void *arg)
         goto error_pkt;
     }
 
-    sdb_module[my_id].name = abs_malloccpy(pkt->data,
-                                        (char *)pkt->data - group - 1);
+    /* Remember NULL character! */
+    text_size = (size_t)(group - (char *)pkt->data);
+    sdb_module[my_id].name = abs_malloc0(text_size);
+    strncpy((char *)sdb_module[my_id].name, (char *)pkt->data, text_size - 1);
 
     for(i = 0; i < SDB_GROUP_MAX; ++i) {
         if(strcmp(group, group_conversion[i].str) == 0) {
@@ -421,6 +482,9 @@ void *sdb_module_thread(void *arg)
     sdb_module[my_id].data_valid = false;
     sdb_module[my_id].data_socket = false;
 
+    /* Now that everything is ready, wake up the observer to notice us */
+    sdb_observer_wake_up();
+
     /* Notify threads waiting and leave space for sending messages */
     pthread_cond_broadcast(&sdb_module[my_id].cond_var);
     pthread_mutex_unlock(&sdb_module[my_id].lock);
@@ -428,11 +492,13 @@ void *sdb_module_thread(void *arg)
     /* Mutex is always locked when not waiting to cond variable. */
     pthread_mutex_lock(&sdb_module[my_id].lock);
     while(1) {
-        while(!sdb_module[my_id].data_valid && !sdb_module[my_id].data_socket) {
+        while(!sdb_module[my_id].data_valid &&
+                                        !sdb_module[my_id].data_socket) {
             pthread_cond_wait(&sdb_module[my_id].cond_var, 
                                                 &sdb_module[my_id].lock);
         }
-        
+
+        printf_dbg("Module %s has work to do\n", sdb_module[my_id].name);
         if(sdb_module[my_id].data_valid && sdb_module[my_id].data_socket) {
             /* Data collision, check priorities */
             dest_index = *((unsigned int *)sdb_module[my_id].data);
@@ -467,7 +533,6 @@ void *sdb_module_thread(void *arg)
         } else if(sdb_module[my_id].data_socket) {
             pkt = mcs_read_command(sdb_module[my_id].rfd,
                                                     sdb_module[my_id].wfd);
-            sdb_module[my_id].data_socket = false;
             if(pkt != NULL) {
                 switch(pkt->type) {
                     case MCS_TYPE_MESSAGE:
@@ -486,15 +551,24 @@ void *sdb_module_thread(void *arg)
                         break;
                 }
 
+                sdb_module[my_id].data_socket = false;
+
                 mcs_free(pkt);
+            } else {
+                printf_dbg("There should be data in the socket, "
+                                                        "but there isn't\n");
             }
         }
     }
+
+    /* We should never arrive here! */
+    goto error_ret;
 
 error_pkt:
     mcs_write_command_and_free(mcs_err_packet(ECONNREFUSED),
                                                     sdb_module[my_id].wfd);
     mcs_free(pkt);
 error_ret:
+    pthread_cleanup_pop(1);
     pthread_exit(NULL);
 }
