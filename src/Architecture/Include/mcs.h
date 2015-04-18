@@ -4,7 +4,8 @@
 #include <stdbool.h>
 #include <sdb.h>
 
-typedef unsigned int MCS_error_code;
+#define MCS_READ_TIMEOUT_US 1000
+#define MCS_COMMAND_TYPES 3
 
 enum MCSType {
     MCS_TYPE_MESSAGE    = 0,
@@ -31,7 +32,7 @@ typedef struct MCSCommandOptionsCommon {
     const char *name;
     unsigned short nargs;
     bool raw_data;
-    unsigned int response_size;
+    int response_size;
 } MCSCommandOptionsCommon;
 
 struct MCSCommandOptionsMessage {
@@ -77,8 +78,6 @@ static const int mcs_command_list_size[] =
     mcs_command_payload_list_size,
 };
 
-#define mcs_command_types 3
-
 void mcs_free(MCSPacket *pkt);
 
 MCSPacket *mcs_read_command(int rfd, int wfd);
@@ -87,14 +86,14 @@ int mcs_write_command_and_free(MCSPacket *pkt, int fd);
 
 MCSPacket *mcs_ok_packet_data(void *data, size_t size);
 MCSPacket *mcs_ok_packet(void);
-MCSPacket *mcs_err_packet(MCS_error_code err_code);
+MCSPacket *mcs_err_packet(int err_code);
 MCSPacket *mcs_create_packet(MCSCommand cmd, unsigned short nargs,
         unsigned char *args, unsigned short data_size, unsigned char *data);
-MCSPacket *mcs_create_packet_with_dest(MCSCommand cmd, unsigned char *dest,
+MCSPacket *mcs_create_packet_with_dest(MCSCommand cmd, char *dest,
                             unsigned short nargs, unsigned char *args,
                             unsigned short data_size, unsigned char *data);
 
-MCS_error_code mcs_err_code_from_command(MCSPacket *pkt);
+int mcs_err_code_from_command(MCSPacket *pkt);
 const char *mcs_command_to_string(MCSPacket *pkt);
 static inline MCSCommand mcs_command(MCSPacket *pkt)
 {

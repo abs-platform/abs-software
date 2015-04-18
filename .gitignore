@@ -19,7 +19,8 @@ bin-release/
 *.d
 *.so
 
-# SDB
+# Binaries
+/src/Architecture/MCS/Test/mcs
 /src/Architecture/SDB/sdb
 
 # Auto generated files

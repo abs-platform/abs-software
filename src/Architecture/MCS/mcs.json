@@ -16,7 +16,7 @@
 	{
 	"name" : "sdb_handshake",
 	"description" : "Establish connection with the SDB",
-	"nargs" : 1,
+	"nargs" : 0,
 	"raw_data" : true,
 	"type" : "message",
 	"config" : {

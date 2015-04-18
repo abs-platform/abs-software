@@ -5,14 +5,13 @@
 #include <mcs.h>
 #include <sdb.h>
 
-/* #define DEBUG 1 */
-
 static int read_check_config(int fd, MCSPacket *pkt)
 {
+    int ret;
     unsigned char dest_size;
     const MCSCommandOptionsCommon *cmd;
 
-    if(pkt->type >= mcs_command_types) {
+    if(pkt->type >= MCS_COMMAND_TYPES) {
         printf_dbg("The type of command %u does not exist\n", pkt->type);
         return -1;
     }
@@ -33,24 +32,23 @@ static int read_check_config(int fd, MCSPacket *pkt)
 
     pkt->nargs = cmd->nargs;
 
-    /* Last argument is the raw data */
-    if(cmd->raw_data) {
-        pkt->nargs -= 1;
-    }
-
     /* Read arguments */
     if(pkt->nargs > 0) {
         pkt->args = malloc(pkt->nargs);
-        if(read(fd, pkt->args, pkt->nargs) < pkt->nargs) {
-            printf_dbg("Could not read");
+        ret = abs_read(fd, (char *)pkt->args, pkt->nargs, MCS_READ_TIMEOUT_US);
+        if(ret < pkt->nargs) {
+            printf_dbg("Could not read. Expecting %d arguments. Returned %d\n",
+                                        pkt->nargs, ret);
             return -1;
         }
     }
 
     /* Read destination */
     if(pkt->type == MCS_TYPE_MESSAGE &&
-                    mcs_command_message_list[pkt->cmd].destination[0] == '@') {
-        if(read(fd, &dest_size, sizeof(dest_size)) < sizeof(dest_size)) {
+                mcs_command_message_list[pkt->cmd].destination != NULL &&
+                mcs_command_message_list[pkt->cmd].destination[0] == '@') {
+        if(abs_read(fd, (char *)&dest_size, sizeof(dest_size),
+                        MCS_READ_TIMEOUT_US) < (int)sizeof(dest_size)) {
             printf_dbg("Could not read\n");
             return -1;
         }
@@ -60,23 +58,27 @@ static int read_check_config(int fd, MCSPacket *pkt)
             return -1;
         }
 
-        pkt->dest = malloc(dest_size);
-        if(read(fd, pkt->dest, dest_size) < dest_size) {
+        pkt->dest = malloc(dest_size + 1);
+        if(abs_read(fd, pkt->dest, dest_size, MCS_READ_TIMEOUT_US)
+                                                    < dest_size) {
             printf_dbg("Could not read\n");
             return -1;
         }
+
+        pkt->dest[dest_size] = '\0'; /* Is a string, NULL terminated */
     }
 
     /* Read raw data */
     if(cmd->raw_data) {
-        if(read(fd, &pkt->data_size, sizeof(pkt->data_size))
-                                                    < sizeof(pkt->data_size)) {
+        if(abs_read(fd, (char *)&pkt->data_size, sizeof(pkt->data_size),
+                        MCS_READ_TIMEOUT_US) < (int)sizeof(pkt->data_size)) {
             printf_dbg("Could not read\n");
             return -1;
         }
 
         pkt->data = malloc(pkt->data_size);
-        if(read(fd, pkt->data, pkt->data_size) < pkt->data_size) {
+        if(abs_read(fd, (char *)pkt->data, pkt->data_size, MCS_READ_TIMEOUT_US)
+                                                < (int)pkt->data_size) {
             printf_dbg("Could not read\n");
             return -1;
         }
@@ -113,7 +115,7 @@ static int check_packet(MCSPacket *pkt)
         }
 #endif
     } else {
-        if(pkt->type >= mcs_command_types) {
+        if(pkt->type >= MCS_COMMAND_TYPES) {
             printf_dbg("The type of command %u does not exist\n", pkt->type);
             return -1;
         }
@@ -227,7 +229,8 @@ MCSPacket *mcs_read_command(int rfd, int wfd)
 
     pkt = abs_malloc0(sizeof(*pkt));
 
-    if(read(rfd, (char *)&pkt->type, sizeof(char)) < sizeof(char)) {
+    if(abs_read(rfd, (char *)&pkt->type, sizeof(char), MCS_READ_TIMEOUT_US)
+                                                    < (int)sizeof(char)) {
         printf_dbg("Could not read\n");
         goto error_no_notify;
     }
@@ -236,7 +239,8 @@ MCSPacket *mcs_read_command(int rfd, int wfd)
         case MCS_TYPE_MESSAGE:
         case MCS_TYPE_STATE:
         case MCS_TYPE_PAYLOAD:
-            if(read(rfd, &pkt->cmd, sizeof(pkt->cmd)) < sizeof(pkt->cmd)) {
+            if(abs_read(rfd, (char *)&pkt->cmd, sizeof(pkt->cmd),
+                                MCS_READ_TIMEOUT_US) < (int)sizeof(pkt->cmd)) {
                 printf_dbg("Could not read\n");
                 goto error;
             }
@@ -247,23 +251,25 @@ MCSPacket *mcs_read_command(int rfd, int wfd)
             break;
 
         case MCS_TYPE_ERR:
-            pkt->data_size = sizeof(MCS_error_code);
+            pkt->data_size = sizeof(int);
             pkt->data = malloc(pkt->data_size);
-            if(read(rfd, pkt->data, pkt->data_size) < pkt->data_size) {
+            if(abs_read(rfd, (char *)pkt->data, pkt->data_size,
+                                MCS_READ_TIMEOUT_US) < pkt->data_size) {
                 printf_dbg("Could not read\n");
                 goto error;
             }
             break;
 
         case MCS_TYPE_OK_DATA:
-            if(read(rfd, &pkt->data_size, sizeof(pkt->data_size))
-                                                    < sizeof(pkt->data_size)) {
+            if(abs_read(rfd, (char *)&pkt->data_size, sizeof(pkt->data_size),
+                        MCS_READ_TIMEOUT_US) < (int)sizeof(pkt->data_size)) {
                 printf_dbg("Could not read\n");
                 goto error;
             }
 
             pkt->data = malloc(pkt->data_size);
-            if(read(rfd, pkt->data, pkt->data_size) < pkt->data_size) {
+            if(abs_read(rfd, (char *)pkt->data, pkt->data_size,
+                                MCS_READ_TIMEOUT_US) < pkt->data_size) {
                 printf_dbg("Could not read\n");
                 goto error;
             }        
@@ -288,35 +294,42 @@ error_no_notify:
 
 int mcs_write_command(MCSPacket *pkt, int fd)
 {
-    size_t type_size, cmd_size, args_size, dest_size, data_size_size, data_size;
-    size_t act_size, tot_size;
+    size_t type_size, dest_size;
+    size_t tot_size;
     char *raw, *raw_act;
 
     if(check_packet(pkt) < 0) {
-        return -1;
+        return EUNDEF;
     }
 
     type_size = sizeof(char);
-    cmd_size = sizeof(pkt->cmd);
-    args_size = pkt->nargs * sizeof(*pkt->args);
-    dest_size = pkt->dest == NULL ? 0 : strlen(pkt->dest);
-    data_size_size = sizeof(pkt->data_size);
-    data_size = pkt->data_size * sizeof(*pkt->data);
 
     switch(pkt->type) {
         case MCS_TYPE_ERR:
-            tot_size = type_size + data_size;
+            tot_size = type_size + pkt->data_size;
             raw = malloc(tot_size);
             memcpy(raw, (char *)&pkt->type, type_size);
-            memcpy(raw + type_size, pkt->data, data_size);
+            memcpy(raw + type_size, pkt->data, pkt->data_size);
             break;
 
         case MCS_TYPE_OK_DATA:
-            tot_size = type_size + data_size_size + data_size;
+            tot_size = type_size + sizeof(pkt->data_size) + pkt->data_size;
             raw = malloc(tot_size);
-            memcpy(raw, (char *)&pkt->type, type_size);
-            memcpy(raw + type_size, &pkt->data_size, data_size_size);
-            memcpy(raw + type_size + data_size_size, pkt->data, data_size);
+            raw_act = raw;
+            memcpy(raw_act, (char *)&pkt->type, type_size);
+            raw_act += type_size;
+            memcpy(raw_act, &pkt->data_size, sizeof(pkt->data_size));
+            raw_act += sizeof(pkt->data_size);
+            memcpy(raw_act, pkt->data, pkt->data_size);
+            raw_act += pkt->data_size;
+
+#ifdef DEBUG
+            if((size_t)(raw_act - raw) != tot_size) {
+                printf_dbg("Real size is not expected size\n");
+                return EUNDEF;
+            }
+#endif
+
             break;
 
         case MCS_TYPE_OK:
@@ -326,15 +339,15 @@ int mcs_write_command(MCSPacket *pkt, int fd)
             break;
 
         default:
-            tot_size = type_size + cmd_size + args_size;
+            tot_size = type_size + sizeof(pkt->cmd) + pkt->nargs;
 
-            if(dest_size != 0) {
-                tot_size += sizeof(char);
-                tot_size += dest_size;
+            if(pkt->dest != NULL) {
+                tot_size += sizeof(unsigned char);
+                tot_size += strlen(pkt->dest);
             }
 
-            if(data_size != 0) {
-                tot_size += data_size_size + data_size;
+            if(pkt->data_size != 0) {
+                tot_size += sizeof(pkt->data_size) + pkt->data_size;
             }
 
             raw = malloc(tot_size);
@@ -342,12 +355,15 @@ int mcs_write_command(MCSPacket *pkt, int fd)
 
             memcpy(raw_act, (char *)&pkt->type, type_size);
             raw_act += type_size;
-            memcpy(raw_act, &pkt->cmd, cmd_size);
-            raw_act += cmd_size;
-            memcpy(raw_act, pkt->args, args_size);
-            raw_act += args_size;
+            memcpy(raw_act, &pkt->cmd, sizeof(pkt->cmd));
+            raw_act += sizeof(pkt->cmd);
+            if(pkt->nargs != 0) {
+                memcpy(raw_act, pkt->args, pkt->nargs);
+                raw_act += pkt->nargs;
+            }
 
-            if(dest_size != 0) {
+            if(pkt->dest != NULL) {
+                dest_size = strlen(pkt->dest);
                 memcpy(raw_act, (unsigned char *)&dest_size,
                                                     sizeof(unsigned char));
                 raw_act += sizeof(unsigned char);
@@ -355,24 +371,24 @@ int mcs_write_command(MCSPacket *pkt, int fd)
                 raw_act += dest_size;
             }
 
-            if(data_size != 0) {
-                memcpy(raw_act, &pkt->data_size, data_size_size);
-                raw_act += data_size_size;
-                memcpy(raw_act, pkt->data, data_size);
-                raw_act += data_size;
+            if(pkt->data_size != 0) {
+                memcpy(raw_act, &pkt->data_size, sizeof(pkt->data_size));
+                raw_act += sizeof(pkt->data_size);
+                memcpy(raw_act, pkt->data, pkt->data_size);
+                raw_act += pkt->data_size;
             }
 
 #ifdef DEBUG
             if((size_t)(raw_act - raw) != tot_size) {
                 printf_dbg("Real size is not expected size\n");
-                return -1;
+                return EUNDEF;
             }
 #endif
             break;
     }
 
-    if(write(fd, raw, tot_size) < tot_size) {
-        return -1;
+    if(abs_write(fd, raw, tot_size) < (int)tot_size) {
+        return EUNDEF;
     }
 
     free(raw);
@@ -411,17 +427,17 @@ MCSPacket *mcs_ok_packet(void)
     return pkt;
 }
 
-MCSPacket *mcs_err_packet(MCS_error_code err_code)
+MCSPacket *mcs_err_packet(int err_code)
 {
     MCSPacket *pkt;
-    MCS_error_code *err_code_mem;
+    int *err_code_mem;
     
     err_code_mem = malloc(sizeof(*err_code_mem));
     *err_code_mem = err_code;
 
     pkt = abs_malloc0(sizeof(*pkt));
     pkt->type = MCS_TYPE_ERR;
-    pkt->data_size = sizeof(MCS_error_code);
+    pkt->data_size = sizeof(int);
     pkt->data = (unsigned char *)err_code_mem;
 
     return pkt;
@@ -451,7 +467,7 @@ MCSPacket *mcs_create_packet(MCSCommand cmd, unsigned short nargs,
     }
 }
 
-MCSPacket *mcs_create_packet_with_dest(MCSCommand cmd, unsigned char *dest,
+MCSPacket *mcs_create_packet_with_dest(MCSCommand cmd, char *dest,
                             unsigned short nargs, unsigned char *args,
                             unsigned short data_size, unsigned char *data)
 {
@@ -477,11 +493,11 @@ MCSPacket *mcs_create_packet_with_dest(MCSCommand cmd, unsigned char *dest,
     }
 }
 
-MCS_error_code mcs_err_code_from_command(MCSPacket *pkt)
+int mcs_err_code_from_command(MCSPacket *pkt)
 {
-    MCS_error_code *err_code;
-    if(pkt->data_size == sizeof(MCS_error_code)) {
-        err_code = (MCS_error_code *)pkt->data;
+    int *err_code;
+    if(pkt->data_size == sizeof(int)) {
+        err_code = (int *)pkt->data;
         return *err_code;
     } else {
         return 0;
@@ -500,7 +516,7 @@ const char *mcs_command_to_string(MCSPacket *pkt)
         return ok;
     } else if(pkt->type == MCS_TYPE_OK_DATA) {
         return ok_data;
-    } else if(pkt->type < mcs_command_types &&
+    } else if(pkt->type < MCS_COMMAND_TYPES &&
                         pkt->cmd < mcs_command_list_size[pkt->type]) {
         if(pkt->type == MCS_TYPE_MESSAGE) {
             return mcs_command_message_list[pkt->cmd].cmd.name;
