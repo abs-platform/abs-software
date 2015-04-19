@@ -1,5 +1,7 @@
 #include "sdb_usb.h"
 
+int stop_read=0, stop_write=0;
+
 static unsigned char *sdb_to_usb(MCSPacket *packet, int *usb_packet_size)
 {
     int i = 0;
@@ -22,33 +24,62 @@ static unsigned char *sdb_to_usb(MCSPacket *packet, int *usb_packet_size)
     }
 }
 
-void *usb_thread(void *arg)
+void* eread(void* pv)
 {
-    char *buffer;
-    QueueElement *element;
-    MCSPacket *response;
-    int data_size, packet_size, response_type;
+    int fd;
     char response_usb[MAX_SIZE_USB_PACKET];
-    int fd = open(SDB_USB_DEVICE, O_RDWR);
 
-    while(element = usb_queue_pop()) {
-        buffer = sdb_to_usb(element->data, &packet_size);
-        write(fd, buffer, packet_size);
+    fd = *((int*)pv);
+    
+    while(!stop_read) {
         read(fd, response_usb, MAX_SIZE_USB_PACKET);
-        response_type = (response_usb[0] << 3) & 0x03;
-        switch(response_type) {
-            case OK:
-                response = mcs_ok_packet();
-                break;
-            case OK_DATA:
-                data_size = (int)(result[0] << 1);
-                response = mcs_ok_packet_data(&response_usb[2], data_size);
-                break;
-            case ERROR:
-                response = mcs_err_packet(EHWFAULT);
-                break;
-        }
-        sdb_module_write_mcs_packet(response, element->id_process, SDB_USB_ID);
-        free(buffer);
+        printf("received\n");
+        /*
+         *response_type = (response_usb[0] << 3) & 0x03;
+         *switch(response_type) {
+         *    case OK:
+         *      response = mcs_ok_packet();
+         *       break;
+         *  case OK_DATA:
+         *       data_size = (int)(result[0] << 1);
+         *       response = mcs_ok_packet_data(&response_usb[2], data_size);
+         *       break;
+         *   case ERROR:
+         *       response = mcs_err_packet(EHWFAULT);
+         *       break;
+         *}
+         *sdb_module_write_mcs_packet(response, element->id_process, SDB_USB_ID);
+         */
     }
+}
+
+void* ewrite(void* pv)
+{
+    int fd;
+    int usb_packet_size;
+    MCSPacket *mcs_packet;
+    unsigned char *usb_packet;
+
+    fd = *((int*)pv);
+
+    while(!stop_write) {
+        mcs_packet = usb_queue_pop();
+        printf("Writing...\n");
+        usb_packet = sdb_to_usb(mcs_packet, &usb_packet_size);
+        write(fd, usb_packet, usb_packet_size);
+    }
+}
+
+void init_sdb_usb()
+{
+    int fd;
+    pthread_t ptread, ptwrite;
+    usb_queue_init();
+    fd = open(SDB_USB_DEVICE, O_RDWR);
+    if(fd < 0) {
+        return -1;
+    }
+    pthread_create(&ptread, NULL, eread, &fd);
+    pthread_create(&ptwrite, NULL, ewrite, &fd);
+    return 0;
 }

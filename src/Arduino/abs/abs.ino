@@ -63,8 +63,10 @@ void loop(void)
         packet = process_packet(msg);
         res = execute_packet(&packet);
         response = to_raw(res, &length);
-        adk.SndData(length, response); 
-        adk.SndData(length, response);    
+        adk.SndData(length, response);   
+        adk.SndData(length, response);  
+        free(response);
+       
     }    
    
     for(i = 0; i < eventCount; i++) {

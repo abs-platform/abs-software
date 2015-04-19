@@ -55,23 +55,24 @@ void dumpData(int buffer_id)
         adk.SndData(1, (uint8_t *)dataFile.read());
     }
     dataFile.close();
+    interrupts();
 }
 
 uint8_t *to_raw(USBPacket packet, uint16_t *length)
 {
     int i = 0;
-    uint8_t msg[MAX_PACKET_SIZE]; 
+    uint8_t *msg; 
+    msg = (uint8_t *) malloc(MAX_PACKET_SIZE);
     *length = 4 + packet.data_size;
     
     msg[0] = ((packet.command << 5) & 0xE0) + ((packet.parameters << 1) & 0x1E) + 1;
     msg[1] = (packet.cmd_arg1 << 1) + 1;
-    Serial.println(msg[1],HEX);
     msg[2] = (packet.cmd_arg2 << 1) + 1;
     msg[3] = (packet.data_size >> 7) + 1;
     msg[4] = (packet.data_size << 1) + 1; 
     msg[5] = 100;
     msg[5 + packet.data_size] = packet.packet_id << 7;
-    return &msg[0];
+    return msg;
 }
 
 USBPacket process_packet(uint8_t *msg)
@@ -123,7 +124,6 @@ USBPacket execute_packet(USBPacket *packet)
                 case ANALOG_READ:
                     if(IS_PIN_ANALOG(pin)) {
                         result = analogRead(pin);
-                        Serial.println(result);
                         response = usb_ok_data_packet(result, NULL, 1);
                     } else {
                         response = usb_error_packet(1);

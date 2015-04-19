@@ -21,6 +21,6 @@ typedef enum {
     ERROR
 } UsbResponse;
 
-void *usb_thread(void *arg);
+int init_sdb_usb(void);
 
 #endif /* __SDB_USB_H */

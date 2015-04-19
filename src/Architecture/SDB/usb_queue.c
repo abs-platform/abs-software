@@ -9,7 +9,7 @@ void usb_queue_init(void)
     /* Initialize the usb queue */
     queue.buf = malloc(sizeof(QueueElement) * USB_QUEUE_SIZE);
     queue.alloc = USB_QUEUE_SIZE;
-    queue.n = 0;
+    queue.n = 1;
     pthread_mutex_init(&usb_queue_lock, NULL);
     /* Initialize the semaphore which counts packets in
     the usb queue.Its initial value should be zero. */
