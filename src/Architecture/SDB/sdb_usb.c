@@ -37,7 +37,7 @@ void* eread(void* pv)
     
     while(!stop_read) {
         if(read(fd, response_usb, MAX_SIZE_USB_PACKET) > 0) {
-            printf("Receiving Arduino Packet...\n");
+            printf_dbg("Receiving Arduino Packet...\n");
             
             response_type = (response_usb[0] << 3) & 0x03;
             switch(response_type) {
@@ -70,7 +70,7 @@ void* ewrite(void* pv)
 
     while(!stop_write) {
         mcs_packet = usb_queue_pop(&id_process);
-        printf("Sending Arduino Packet...\n");
+        printf_dbg("Sending Arduino Packet...\n");
         usb_packet = sdb_to_usb(mcs_packet, &usb_packet_size);
         write(fd, usb_packet, usb_packet_size);
     }
