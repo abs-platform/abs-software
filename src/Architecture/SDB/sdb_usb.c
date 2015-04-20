@@ -1,6 +1,8 @@
 #include "sdb_usb.h"
 
-int stop_read=0, stop_write=0;
+int stop_read = 0, stop_write = 0;
+
+int id_process = 0;
 
 static unsigned char *sdb_to_usb(MCSPacket *packet, int *usb_packet_size)
 {
@@ -18,7 +20,7 @@ static unsigned char *sdb_to_usb(MCSPacket *packet, int *usb_packet_size)
             usb_packet[5 + i] = packet->data[i];  
         }
         usb_packet[6 + i] = (10) << 1;   
-        return &usb_packet[0];
+        return usb_packet;
     } else {
         return NULL;
     }
@@ -32,24 +34,24 @@ void* eread(void* pv)
     fd = *((int*)pv);
     
     while(!stop_read) {
-        read(fd, response_usb, MAX_SIZE_USB_PACKET);
-        printf("received\n");
-        /*
-         *response_type = (response_usb[0] << 3) & 0x03;
-         *switch(response_type) {
-         *    case OK:
-         *      response = mcs_ok_packet();
-         *       break;
-         *  case OK_DATA:
-         *       data_size = (int)(result[0] << 1);
-         *       response = mcs_ok_packet_data(&response_usb[2], data_size);
-         *       break;
-         *   case ERROR:
-         *       response = mcs_err_packet(EHWFAULT);
-         *       break;
-         *}
-         *sdb_module_write_mcs_packet(response, element->id_process, SDB_USB_ID);
-         */
+        if(read(fd, response_usb, MAX_SIZE_USB_PACKET) > 0) {
+            printf_dbg(("Receiving Arduino Packet...\n");
+            
+            response_type = (response_usb[0] << 3) & 0x03;
+            switch(response_type) {
+                case OK:
+                  response = mcs_ok_packet();
+                   break;
+              case OK_DATA:
+                   data_size = (int)(result[0] << 1);
+                   response = mcs_ok_packet_data(&response_usb[2], data_size);
+                   break;
+               case ERROR:
+                   response = mcs_err_packet(EHWFAULT);
+                   break;
+            }
+            sdb_module_write_mcs_packet(response, id_process, SDB_USB_ID);
+        }
     }
 }
 
@@ -63,23 +65,30 @@ void* ewrite(void* pv)
     fd = *((int*)pv);
 
     while(!stop_write) {
-        mcs_packet = usb_queue_pop();
-        printf("Writing...\n");
+        mcs_packet = usb_queue_pop(&id_process);
+        printf_dbg(("Sending Arduino Packet...\n");
         usb_packet = sdb_to_usb(mcs_packet, &usb_packet_size);
         write(fd, usb_packet, usb_packet_size);
     }
 }
 
-void init_sdb_usb()
+void sdb_usb_init()
 {
     int fd;
     pthread_t ptread, ptwrite;
     usb_queue_init();
+    /* Get file descriptor of the USB device */
     fd = open(SDB_USB_DEVICE, O_RDWR);
     if(fd < 0) {
-        return -1;
+        return -1001;
     }
-    pthread_create(&ptread, NULL, eread, &fd);
-    pthread_create(&ptwrite, NULL, ewrite, &fd);
+    /* Start usb read thread */
+    if(pthread_create(&ptread, NULL, eread, &fd) < 0) {
+        return -1002;
+    }
+    /* Start usb write thread */
+    if(pthread_create(&ptwrite, NULL, ewrite, &fd) < 0) {
+        return -1002;
+    }
     return 0;
 }

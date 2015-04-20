@@ -6,7 +6,7 @@
 #include <pthread.h>
 #include <semaphore.h>
 
-#include "sdb.h"
+#include <mcs.h>
 #include <sdb.h>
 
 #define USB_QUEUE_SIZE 128
@@ -30,8 +30,8 @@ extern sem_t packet_queue_count;
 
 void usb_queue_init(void);
 
-void usb_queue_push(void *data, int id_process);
+void usb_queue_push(MCSPacket *packet, int id_process);
 
-void *usb_queue_pop(void);
+MCSPacket *usb_queue_pop(int *id_process);
 
 #endif /* __USB_QUEUE_H */

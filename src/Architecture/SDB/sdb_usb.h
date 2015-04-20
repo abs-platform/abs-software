@@ -7,7 +7,6 @@
 #include <string.h>
 #include <mcs.h>
 #include <abs.h>
-#include "sdb.h"
 #include <sdb.h>
 #include "usb_queue.h"
 
@@ -21,6 +20,6 @@ typedef enum {
     ERROR
 } UsbResponse;
 
-int init_sdb_usb(void);
+int sdb_usb_init(void);
 
 #endif /* __SDB_USB_H */
