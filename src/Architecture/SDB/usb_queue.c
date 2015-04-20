@@ -24,7 +24,7 @@ static void swap(USBQueue *q, int i, int j)
     q->buf[j] = temp;
 }
 
-void usb_queue_push(MCSPacket *packet, int id_process)
+void usb_queue_push(const struct MCSPacket *packet, int id_process)
 {
     int i,n;
     QueueElement *b;
@@ -34,7 +34,7 @@ void usb_queue_push(MCSPacket *packet, int id_process)
     b = queue.buf;
     n = queue.n++;
     b[n].data = packet;
-    b[n].priority = sdb_group_priority[sdb_module[id_process].group];
+    b[n].priority = id_process; /* sdb_group_priority[sdb_module[id_process].group]; */
     for(i = n; (i > 1) && (b[i].priority < b[i-1].priority); i--) {
         swap(&queue, i, i-1);
     }
@@ -44,7 +44,7 @@ void usb_queue_push(MCSPacket *packet, int id_process)
     pthread_mutex_unlock(&usb_queue_lock);
 }
 
-MCSPacket * usb_queue_pop(int *id_process)
+const struct MCSPacket * usb_queue_pop(int *id_process)
 {
     int i;
     QueueElement *b;

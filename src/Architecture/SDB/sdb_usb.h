@@ -8,6 +8,7 @@
 #include <mcs.h>
 #include <abs.h>
 #include <sdb.h>
+#include "sdb_private.h"
 #include "usb_queue.h"
 
 #define SDB_USB_DEVICE "/dev/usb_accessory"

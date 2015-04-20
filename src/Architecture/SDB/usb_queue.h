@@ -12,9 +12,9 @@
 #define USB_QUEUE_SIZE 128
 
 typedef struct QueueElement { 
-    MCSPacket * data; 
     int id_process; 
     int priority;
+    const struct MCSPacket * data; 
 } QueueElement;
 
 typedef struct USBQueue { 
@@ -30,8 +30,8 @@ extern sem_t packet_queue_count;
 
 void usb_queue_init(void);
 
-void usb_queue_push(MCSPacket *packet, int id_process);
+void usb_queue_push(const struct MCSPacket *packet, int id_process);
 
-MCSPacket *usb_queue_pop(int *id_process);
+const struct MCSPacket *usb_queue_pop(int *id_process);
 
 #endif /* __USB_QUEUE_H */
