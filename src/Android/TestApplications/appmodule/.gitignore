@@ -1,0 +1,8 @@
+.gradle
+.idea
+.DS_Store
+/local.properties
+/build
+gradlew
+gradlew.bat
+/gradle
