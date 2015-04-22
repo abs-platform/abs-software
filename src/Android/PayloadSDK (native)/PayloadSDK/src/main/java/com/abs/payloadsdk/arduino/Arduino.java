@@ -101,6 +101,21 @@ public class Arduino {
         }
     }
 
+    public int startSerial(int num)
+    {
+        return 1;
+    }
+
+    public byte writeSerial(int num)
+    {
+        return 1;
+    }
+
+    public byte readSerial(int num)
+    {
+        return 1;
+    }
+
     /**
      * Creates a new Event and returns an EventHandler
      *
@@ -115,7 +130,7 @@ public class Arduino {
                 SDBPacket.CMD.CREATE_EVENT, cmd_args, data));
 
         if(response.getCMD() == SDBPacket.CMD.OK_DATA) {
-            return new EventHandler(1);
+            return new EventHandler(1, sdb);
         } else {
             return null; /* something has gone wrong */
         }

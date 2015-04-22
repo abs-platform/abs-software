@@ -81,8 +81,7 @@
  /Users/arnauprat/PayloadApp/PayloadSDK/src/main/jni/include/mcs.h \
  /Users/arnauprat/PayloadApp/PayloadSDK/src/main/jni/include/sdb.h \
  /Users/arnauprat/PayloadApp/PayloadSDK/src/main/jni/include/abs.h \
- /Users/arnauprat/PayloadApp/PayloadSDK/src/main/jni/include/auto_mcs.h \
- /Users/arnauprat/PayloadApp/PayloadSDK/src/main/jni/include/abs_test.h
+ /Users/arnauprat/PayloadApp/PayloadSDK/src/main/jni/include/auto_mcs.h
 
 /Users/arnauprat/Library/Android/ndk/platforms/android-21/arch-arm/usr/include/sys/socket.h:
 
@@ -247,5 +246,3 @@
 /Users/arnauprat/PayloadApp/PayloadSDK/src/main/jni/include/abs.h:
 
 /Users/arnauprat/PayloadApp/PayloadSDK/src/main/jni/include/auto_mcs.h:
-
-/Users/arnauprat/PayloadApp/PayloadSDK/src/main/jni/include/abs_test.h:
