@@ -101,19 +101,46 @@ public class Arduino {
         }
     }
 
+    public int digitalToogle(int pin)
+    {
+        byte[] array = {(byte)pin, (byte)0};
+        
+        SDBPacket response = sdb.sendSync(new SDBPacket(
+                SDBPacket.CMD.ANALOG_READ, array, null));
+
+        if(response.getCMD() == SDBPacket.CMD.OK_DATA) {
+            return response.getParameter(0) & 0xFF;
+        } else {
+            return -1; /* something has gone wrong */
+        }
+    }
+
     public int startSerial(int num)
     {
+        byte[] array = {(byte)num, (byte)0};
+
+        SDBPacket response = sdb.sendSync(new SDBPacket(
+                SDBPacket.CMD.INIT_SERIAL, array, null));
         return 1;
     }
 
-    public byte writeSerial(int num)
+    public byte writeSerial(int num, byte[] data)
     {
-        return 1;
+        byte[] array = {(byte)num, (byte)0};
+
+        SDBPacket response = sdb.sendSync(new SDBPacket(
+                SDBPacket.CMD.WRITE_SERIAL, array, data));
+
+        return response.getParameter(0);
     }
 
     public byte readSerial(int num)
     {
-        return 1;
+        byte[] array = {(byte)num, (byte)0};
+
+        SDBPacket response = sdb.sendSync(new SDBPacket(
+                SDBPacket.CMD.READ_SERIAL, array, null));
+        return response.getParameter(0);
     }
 
     /**

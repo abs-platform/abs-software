@@ -26,4 +26,17 @@ public class EventHandler {
 
         return res;
     }
+
+    public int setInterval(int interval)
+    {
+        byte[] cmd_args = {(byte)eventID};
+
+        SDBPacket response = sdb.sendSync(new SDBPacket(
+                SDBPacket.CMD.SET_INTERVAL, cmd_args, null));
+
+        byte res = response.getParameter(0);
+
+        return res & 0xFF;
+
+    }
 }

@@ -4,7 +4,7 @@
 #include <stdbool.h>
 #include <sdb.h>
 
-#define MCS_READ_TIMEOUT_US 4000000 //20000
+#define MCS_READ_TIMEOUT_US 1000000 //20000
 #define MCS_COMMAND_TYPES 3
 
 enum MCSType {

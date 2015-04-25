@@ -33,6 +33,7 @@ int connectSDB(int id)
         goto error;
     }
 
+
     /* Handshaking */
     sprintf(buffer, "%s: Handshake\n", name);
     pkt = mcs_create_packet(MCS_MESSAGE_SDB_HANDSHAKE, 0, NULL,
@@ -89,10 +90,13 @@ int sendSyncSDB(int fd, MCSPacket *pkt)
 
     origin_id = pkt->id;
 
+    LOGD("Sending...\n");
+
     if(mcs_write_command(pkt, fd) != 0) {
         printf_dbg("Error sending TEST packet\n");
         goto error;
     }
+
     pkt = mcs_read_command(fd, fd);
 
     if(pkt == NULL) {
@@ -109,6 +113,8 @@ int sendSyncSDB(int fd, MCSPacket *pkt)
         }
         goto error;
     }
+    LOGD("Receiving...\n");
+
     return 0;
 
  error:

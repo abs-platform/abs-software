@@ -14,9 +14,11 @@ public class SDBPacket {
         DIGITAL_READ,
         ANALOG_WRITE,
         ANALOG_READ,
+        INIT_SERIAL,
         WRITE_SERIAL,
         READ_SERIAL,
         CREATE_EVENT,
+        SET_INTERVAL,
         DUMP_BUFFER,
         OK,
         OK_DATA,
@@ -34,11 +36,13 @@ public class SDBPacket {
         enumMap.put(CMD.ANALOG_READ,    new byte[]{2, 0, 2});
         enumMap.put(CMD.DIGITAL_READ,   new byte[]{2, 0, 3});
         /* Serial comm Arduino */
-        enumMap.put(CMD.WRITE_SERIAL,   new byte[]{2, 0, 6});
-        enumMap.put(CMD.READ_SERIAL,    new byte[]{2, 0, 7});
+        enumMap.put(CMD.INIT_SERIAL,   new byte[]{2, 0, 7});
+        enumMap.put(CMD.WRITE_SERIAL,   new byte[]{2, 0, 8});
+        enumMap.put(CMD.READ_SERIAL,    new byte[]{2, 0, 9});
         /* Events Arduino */
         enumMap.put(CMD.CREATE_EVENT,   new byte[]{2, 0, 4});
-        enumMap.put(CMD.DUMP_BUFFER,    new byte[]{2, 0, 5});
+        enumMap.put(CMD.SET_INTERVAL,    new byte[]{2, 0, 5});
+        enumMap.put(CMD.DUMP_BUFFER,    new byte[]{2, 0, 6});
         /* Response packets */
         enumMap.put(CMD.OK,             new byte[]{(byte)0, 0, 0});
         enumMap.put(CMD.OK_DATA,        new byte[]{(byte)0, 0, 1});

@@ -46,18 +46,16 @@ public class MyPayloadApp extends PayloadApp {
     Thread thread = new Thread() {
         @Override
         public void run() {
-            try {
+
                 //byte[] action = {(byte)35, (byte)11, (byte)3, (byte)0, (byte)0};
                 //arduino.createEvent(1, action);
                 while(true) {
                     arduino.digitalWrite(2, 1);
-                    sleep(50);
+
                     arduino.digitalWrite(2, 0);
-                    sleep(50);
+
                 }
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+
         }
     };
 

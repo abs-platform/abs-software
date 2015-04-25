@@ -43,7 +43,8 @@ typedef enum {
     ANALOG_WRITE,
     DIGITAL_WRITE,
     ANALOG_READ,
-    DIGITAL_READ 
+    DIGITAL_READ,
+    TOOGLE_PIN
 } ParametersBasicIO;
 
 typedef enum {

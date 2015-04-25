@@ -8,13 +8,14 @@
 
 #include <mcs.h>
 #include <sdb.h>
+#include "sdb_private.h"
 
 #define USB_QUEUE_SIZE 128
 
 typedef struct QueueElement { 
     int id_process; 
     int priority;
-    const struct MCSPacket * data; 
+    const MCSPacket * data; 
 } QueueElement;
 
 typedef struct USBQueue { 
@@ -32,6 +33,6 @@ void usb_queue_init(void);
 
 void usb_queue_push(const struct MCSPacket *packet, int id_process);
 
-const struct MCSPacket *usb_queue_pop(int *id_process);
+const struct MCSPacket *usb_queue_pop(int *id);
 
 #endif /* __USB_QUEUE_H */

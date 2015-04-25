@@ -138,6 +138,10 @@ USBPacket execute_packet(USBPacket *packet)
                         response = usb_error_packet(1);
                     }
                     break;
+                case TOOGLE_PIN:
+                    pinMode(pin, OUTPUT);
+                    digitalWrite(pin, !digitalRead(pin));
+                    break;
                 default:
                     response = usb_error_packet(1);
                     break;

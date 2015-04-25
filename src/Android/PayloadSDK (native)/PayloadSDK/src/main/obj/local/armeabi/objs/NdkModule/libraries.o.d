@@ -53,7 +53,8 @@
  /Users/arnauprat/Library/Android/ndk/platforms/android-21/arch-arm/usr/include/linux/byteorder/little_endian.h \
  /Users/arnauprat/Library/Android/ndk/platforms/android-21/arch-arm/usr/include/linux/swab.h \
  /Users/arnauprat/Library/Android/ndk/platforms/android-21/arch-arm/usr/include/asm/swab.h \
- /Users/arnauprat/Library/Android/ndk/platforms/android-21/arch-arm/usr/include/linux/ipv6.h
+ /Users/arnauprat/Library/Android/ndk/platforms/android-21/arch-arm/usr/include/linux/ipv6.h \
+ /Users/arnauprat/Library/Android/ndk/platforms/android-21/arch-arm/usr/include/android/log.h
 
 /Users/arnauprat/PayloadApp/PayloadSDK/src/main/jni/libraries.h:
 
@@ -162,3 +163,5 @@
 /Users/arnauprat/Library/Android/ndk/platforms/android-21/arch-arm/usr/include/asm/swab.h:
 
 /Users/arnauprat/Library/Android/ndk/platforms/android-21/arch-arm/usr/include/linux/ipv6.h:
+
+/Users/arnauprat/Library/Android/ndk/platforms/android-21/arch-arm/usr/include/android/log.h:
