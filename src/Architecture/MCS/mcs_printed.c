@@ -8,9 +8,15 @@
 #endif
 
 typedef enum MCSCommand {
-    MCS_MESSAGE_PROCMAN_START     = 0
-    MCS_STATE_TEMPERATURE_ARDUINO = 65536 , /* 0 x10000 */
-    MCS_PAYLOAD_ARDUINO_GET_PIN   = 131072 , /* 0 x20000 */
+    MCS_MESSAGE_PROCMAN_3 = 0,
+    MCS_MESSAGE_PROCMAN_2 = 1,
+    MCS_MESSAGE_PROCMAN_1 = 2,
+    MCS_STATE_TEMPERATURE_ARDUINO3 = 65539,
+    MCS_STATE_TEMPERATURE_ARDUINO2 = 65540,
+    MCS_STATE_TEMPERATURE_ARDUINO1 = 65541,
+    MCS_PAYLOAD_ARDUINO_GET_PIN3 = 131078,
+    MCS_PAYLOAD_ARDUINO_GET_PIN2 = 131079,
+    MCS_PAYLOAD_ARDUINO_GET_PIN1 = 131080,
 } MCSCommand;
 
 const static struct MCSCommandOptionsMessage mcs_command_message_list[] =
@@ -53,7 +59,7 @@ const static struct MCSCommandOptionsMessage mcs_command_message_list[] =
     },
 };
 
-#define mcs_command_message_list_size 1
+#define mcs_command_message_list_size 3
 
 const static struct MCSCommandOptionsState mcs_command_state_list[] =
 {
@@ -107,7 +113,7 @@ const static struct MCSCommandOptionsState mcs_command_state_list[] =
     },
 };
 
-#define mcs_command_state_list_size 1
+#define mcs_command_state_list_size 3
 
 const static struct MCSCommandOptionsPayload mcs_command_payload_list[] =
 {
@@ -152,6 +158,6 @@ const static struct MCSCommandOptionsPayload mcs_command_payload_list[] =
     },
 };
 
-#define mcs_command_payload_list_size 1
+#define mcs_command_payload_list_size 3
 
 #endif
