@@ -48,9 +48,15 @@ typedef enum {
 } ParametersBasicIO;
 
 typedef enum {
-    INIT,
-    READ,
-    WRITE
+    INIT_UART,
+    READ_UART,
+    WRITE_UART,
+    INIT_SPI,
+    READ_SPI,
+    WRITE_SPI,
+    INIT_CAN,
+    READ_CAN,
+    WRITE_CAN
 } ParametersComms;
 
 typedef enum {

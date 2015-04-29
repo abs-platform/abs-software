@@ -18,20 +18,15 @@ public class SDB {
 
     private native int connectSDBNative();
 
-    private native byte[] sendSyncNative(byte[] array);
-
-
-    public SDBPacket sendSync(SDBPacket packet)
-    {
-        byte[] response;
-        response = sendSyncNative(packet.toRaw());
-        return new SDBPacket(response);
-    }
+    private native SDBPacket sendSyncNative(SDBPacket array);
 
     public SDB()
     {
         connectSDBNative();
-        Log.d("ABS","SDB connected");
     }
 
+    public SDBPacket sendSync(SDBPacket packet)
+    {
+        return sendSyncNative(packet);
+    }
 }

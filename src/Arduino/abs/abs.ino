@@ -63,6 +63,9 @@ void loop(void)
         packet = process_packet(msg);
         res = execute_packet(&packet);
         response = to_raw(res, &length);
+        char str[80];
+        sprintf(str,"%x:%x:%x:%x length %d",response[0],response[1],response[2],response[3],length);
+        Serial.println(str);
         adk.SndData(length, response);   
         adk.SndData(length, response);  
         free(response);

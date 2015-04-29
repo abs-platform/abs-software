@@ -3,16 +3,17 @@ USBPacket usb_ok_packet()
     USBPacket packet;
     packet.command = 0;
     packet.parameters = 0;
+    packet.data_size = 0;
     return packet;
 }
 
-USBPacket usb_ok_data_packet(int arg, char *result, int size)
+USBPacket usb_ok_data_packet(int arg, char *result, int dsize)
 {
     USBPacket packet;
     packet.command = 0; 
     packet.parameters = 1;
     packet.cmd_arg1 = (arg >> 1) & 0x7F;
-    packet.data_size = size;
+    packet.data_size = dsize;
     packet.data = (char *)((arg >> 1) & 0x7F);
     return packet;
 }
@@ -23,6 +24,7 @@ USBPacket usb_error_packet(int error)
     packet.command = 0;
     packet.parameters = 2;
     packet.cmd_arg1 = error;
+    packet.data_size = 0;
     return packet;
 }
 
@@ -141,6 +143,7 @@ USBPacket execute_packet(USBPacket *packet)
                 case TOOGLE_PIN:
                     pinMode(pin, OUTPUT);
                     digitalWrite(pin, !digitalRead(pin));
+                    response = usb_ok_packet();
                     break;
                 default:
                     response = usb_error_packet(1);
@@ -152,14 +155,14 @@ USBPacket execute_packet(USBPacket *packet)
             num = packet->cmd_arg1; 
             if(num <= MAX_SERIAL) {
                 switch(packet->parameters) {
-                    case INIT:
+                    case INIT_UART:
                         mySerial[num].begin(packet->cmd_arg2); 
                         break;
-                    case READ:
+                    case READ_UART:
                         data = (char *) mySerial[num].read();
                         response = usb_ok_data_packet(NULL, data, 1);
                         break;
-                    case WRITE:
+                    case WRITE_UART:
                         Serial.println("Sending data");
                         data = packet->data;
                         for(j = 0; j < packet->data_size; j++) {
@@ -169,6 +172,18 @@ USBPacket execute_packet(USBPacket *packet)
                         
                         response = usb_ok_packet();
                         break;
+                     case INIT_SPI:
+                         break;
+                     case READ_SPI:
+                         break;
+                     case WRITE_SPI:
+                         break;
+                     case INIT_CAN:
+                         break;
+                     case READ_CAN:
+                         break;
+                     case WRITE_CAN:
+                         break;
                 }
             } else {
                 response = usb_error_packet(1);
@@ -212,6 +227,7 @@ USBPacket execute_packet(USBPacket *packet)
                 }
                 break;
             }
+            break;
         default:
             /* Command type: Unknown */
             response = usb_error_packet(1);

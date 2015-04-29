@@ -1,8 +1,8 @@
 package com.abs.payloadsdk.measures;
 
-public class SystemValue {
+public class SystemData {
 
-    public SystemValue()
+    public SystemData()
     {
 
     }

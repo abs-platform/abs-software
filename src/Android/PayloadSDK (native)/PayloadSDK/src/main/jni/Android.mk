@@ -16,5 +16,5 @@ include $(CLEAR_VARS)
 LOCAL_MODULE := NdkModule
 LOCAL_C_INCLUDES := $(LOCAL_PATH)/include
 LOCAL_SRC_FILES := wrapper.c libraries.c
-LOCAL_LDLIBS := -L/Users/arnauprat/PayloadApp/PayloadSDK/src/main/jni/lib -llog -lmcs
+LOCAL_LDLIBS := -L/Users/arnauprat/PayloadApp/PayloadSDK/src/main/jni/lib -llog -lmcs -labs
 include $(BUILD_SHARED_LIBRARY)

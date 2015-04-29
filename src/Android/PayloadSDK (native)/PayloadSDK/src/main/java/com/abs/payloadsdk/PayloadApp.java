@@ -17,11 +17,20 @@ public class PayloadApp extends Service {
     private SDB sdb;
     private Arduino arduino;
 
+    private Attitude attitude;
+    private Power power;
+    private Energy energy;
+    private OrbitalState orbitalState;
+
+
     public PayloadApp(String appName)
     {
         sdb = new SDB();
-        //sdb.send_sync(new SDBPacket(SDBPacket.CMD.HANDSHAKE, appName.getBytes()));
         arduino = new Arduino(sdb);
+        attitude = new Attitude(sdb);
+        energy = new Energy(sdb);
+        orbitalState = new OrbitalState(sdb);
+        power = new Power(sdb);
     }
 
     public Arduino getArduino()
@@ -47,6 +56,11 @@ public class PayloadApp extends Service {
     public OrbitalState orbitalState()
     {
         return null;
+    }
+
+    public String sndMsgApp(int destination, String data)
+    {
+        return "hello";
     }
 
     @Override

@@ -75,7 +75,7 @@ error:
     return -1;
 }
 
-int sendSyncSDB(int fd, MCSPacket *pkt)
+MCSPacket *sendSyncSDB(int fd, MCSPacket *pkt)
 {
 
     char buffer[100];
@@ -115,8 +115,22 @@ int sendSyncSDB(int fd, MCSPacket *pkt)
     }
     LOGD("Receiving...\n");
 
-    return 0;
+    MCSPacket *received = abs_malloccpy(pkt, sizeof(*pkt));
+
+    if(received->dest != NULL) {
+        ((MCSPacket *)(received))->dest = abs_malloccpy(received->dest, strlen(received->dest));
+    }
+
+    if(pkt->nargs != 0) {
+        ((MCSPacket *)(received))->args = abs_malloccpy(received->args, received->nargs);
+    }
+
+    if(received->data_size != 0) {
+        ((MCSPacket *)(received))->data = abs_malloccpy(received->data, received->data_size);
+    }
+
+    return received;
 
  error:
-    return -1;
+    return NULL;
 }

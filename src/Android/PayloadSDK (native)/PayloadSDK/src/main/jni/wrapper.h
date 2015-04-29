@@ -12,7 +12,7 @@
 jint
 Java_com_abs_payloadsdk_sdb_SDB_connectSDBNative(JNIEnv* env, jobject thiz);
 
-jbyteArray
-Java_com_abs_payloadsdk_sdb_SDB_sendSyncNative(JNIEnv *env, jclass cls, jbyteArray data);
+jobject
+Java_com_abs_payloadsdk_sdb_SDB_sendSyncNative(JNIEnv *env, jobject obj, jobject SDBPacket);
 
 #endif // __WRAPPER_H__

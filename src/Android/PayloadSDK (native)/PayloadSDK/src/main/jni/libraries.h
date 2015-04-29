@@ -3,6 +3,7 @@
 
 #include <mcs.h>
 #include <sdb.h>
+#include <abs.h>
 
 #include <stdio.h>
 #include <sys/socket.h>
@@ -16,6 +17,6 @@
 
 int connectSDB(int id);
 
-int sendSyncSDB(int fd, MCSPacket *pkt);
+MCSPacket *sendSyncSDB(int fd, MCSPacket *pkt);
 
 #endif // __LIBRARIES_H__
