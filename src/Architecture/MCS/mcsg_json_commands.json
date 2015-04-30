@@ -1,0 +1,133 @@
+{
+"command_list" : [
+        {
+        "name" : "procman_1",
+                "description" : "Start the Process Manager",
+                "nargs" : 0,
+                "raw_data" : false,
+                "type" : "message",
+                "config" : {
+                    "destination" : "procman",
+                    "origin_groups" : ["syscore"],
+                    "destination_groups" : [],
+                    "response_size" : 0
+                }
+        },
+        {
+        "name" : "procman_2",
+                "description" : "Start the Process Manager",
+                "nargs" : 0,
+                "raw_data" : false,
+                "type" : "message",
+                "config" : {
+                    "destination" : "procman",
+                    "origin_groups" : ["syscore"],
+                    "destination_groups" : [],
+                    "response_size" : 0
+                }
+        },
+        {
+        "name" : "procman_3",
+                "description" : "Start the Process Manager",
+                "nargs" : 0,
+                "raw_data" : false,
+                "type" : "message",
+                "config" : {
+                    "destination" : "procman",
+                    "origin_groups" : ["syscore"],
+                    "destination_groups" : [],
+                    "response_size" : 0
+                }
+        },
+        {
+        "name" : "temperature_arduino1",
+                "description" : "Get temperature from the embedded sensor in the Arduino board",
+                "nargs" : 1,
+                "raw_data" : false,
+                "type" : "state",
+                "config" : {
+                    "update_function" : "get_sensor_value_arduino (1)",
+                    "dimensions" : 1,
+                    "return_type" : "float",
+                    "unit" : "K",
+                    "dimension_name" : null,
+                    "expire_group" : [{"app" : 15}]
+                }
+        },
+        {
+        "name" : "temperature_arduino2",
+                "description" : "Get temperature from the embedded sensor in the Arduino board",
+                "nargs" : 1,
+                "raw_data" : false,
+                "type" : "state",
+                "config" : {
+                    "update_function" : "get_sensor_value_arduino (1)",
+                    "dimensions" : 1,
+                    "return_type" : "float",
+                    "unit" : "K",
+                    "dimension_name" : null,
+                    "expire_group" : [{"app" : 15}]
+                }
+        },
+        {
+        "name" : "temperature_arduino3",
+                "description" : "Get temperature from the embedded sensor in the Arduino board",
+                "nargs" : 1,
+                "raw_data" : false,
+                "type" : "state",
+                "config" : {
+                    "update_function" : "get_sensor_value_arduino (1)",
+                    "dimensions" : 1,
+                    "return_type" : "float",
+                    "unit" : "K",
+                    "dimension_name" : null,
+                    "expire_group" : [{"app" : 15}]
+                }
+        },
+        {
+        "name" : "arduino_get_pin1",
+                "description" : "Get the value of the given pin in the Arduino board",
+                "nargs" : 1,
+                "raw_data" : false,
+                "type" : "payload",
+                "config" : {
+                    "priority" : 1,
+                    "command" : "001",
+                    "parameters" : "0110",
+                    "arguments" : "@arg0",
+                    "data" : null,
+                    "response_size" : 1
+                }
+        },
+        {
+        "name" : "arduino_get_pin2",
+                "description" : "Get the value of the given pin in the Arduino board",
+                "nargs" : 1,
+                "raw_data" : false,
+                "type" : "payload",
+                "config" : {
+                    "priority" : 1,
+                    "command" : "001",
+                    "parameters" : "0110",
+                    "arguments" : "@arg0",
+                    "data" : null,
+                    "response_size" : 1
+                }
+        },
+        {
+        "name" : "arduino_get_pin3",
+                "description" : "Get the value of the given pin in the Arduino board",
+                "nargs" : 1,
+                "raw_data" : false,
+                "type" : "payload",
+                "config" : {
+                    "priority" : 1,
+                    "command" : "001",
+                    "parameters" : "0110",
+                    "arguments" : "@arg0",
+                    "data" : null,
+                    "response_size" : 1
+                }
+        }
+    ]
+}
