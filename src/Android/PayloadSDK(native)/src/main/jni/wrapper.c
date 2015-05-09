@@ -16,11 +16,11 @@ Java_com_abs_payloadsdk_sdb_SDB_sendSyncNative(JNIEnv *env, jobject obj, jobject
         jobject result;
 
         MCSPacket *packet, *response;
-        
+
         /* Get the SDBPacket object */
 
         pkg = (*env)->GetObjectClass(env, SDBPacket);
-        
+
         /* Get the elements of SDBPacket */
 
         getCmd = (*env)->GetMethodID(env, pkg, "getCmd", "()I");
@@ -35,12 +35,12 @@ Java_com_abs_payloadsdk_sdb_SDB_sendSyncNative(JNIEnv *env, jobject obj, jobject
         data = (*env)->CallObjectMethod(env, SDBPacket, getData);
         dataLength = (*env)->GetArrayLength(env, data);
         dataBuffer = (*env)->GetByteArrayElements(env, data, NULL);
-        
+
         /* perform the call to the SDB */
 
         packet = mcs_create_packet(cmd, argsLength, argsBuffer, dataLength, dataBuffer);
         response = sendSyncSDB(fd, packet);
-        
+
         /* Return the response */
 
         (*env)->ReleaseByteArrayElements(env, args, argsBuffer, 0);
@@ -50,9 +50,7 @@ Java_com_abs_payloadsdk_sdb_SDB_sendSyncNative(JNIEnv *env, jobject obj, jobject
 
         if(response != NULL){
 
-            data_size = response->data_size;
-            a = response->data;
-            ret = (*env)->NewByteArray(env,data_size);
+            ret = (*env)->NewByteArray(env, response->data_size);
             (*env)->SetByteArrayRegion(env, ret, 0, response->data_size, response->data);
             result = (*env)->NewObject(env, pkg, constructor, response->data_size, ret);
 
