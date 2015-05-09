@@ -67,7 +67,6 @@ const struct MCSPacket * usb_queue_pop(int *id)
     QueueElement *b;
     /* If the queue is empty, block until a new packet is enqueued.  */
     sem_wait(&packet_queue_count);
-    printf_dbg("stage1\n");
     /* Lock the mutex on the usb queue.  */
     pthread_mutex_lock(&usb_queue_lock);  
     if(queue.n == -1) {
@@ -76,7 +75,6 @@ const struct MCSPacket * usb_queue_pop(int *id)
     }
     /* Reorder the queue and pop the first element. */
     b = queue.buf;
-    printf_dbg("stage2\n");
     queue.n--;
     *id = ids;
     b[0] = b[queue.n];
@@ -85,6 +83,5 @@ const struct MCSPacket * usb_queue_pop(int *id)
     }
     /* Unlock the usb queue mutex. */
     pthread_mutex_unlock(&usb_queue_lock); 
-    printf_dbg("stage3\n");
     return b[0].data;
 }
