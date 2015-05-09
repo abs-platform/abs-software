@@ -79,7 +79,7 @@ void loop(void)
             save_event_data(i, (char *) res.data);
             event_list[i].execute = 0;
         }
-    }  
+    }     
 }
 
 void events_routine(void)

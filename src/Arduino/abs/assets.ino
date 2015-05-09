@@ -36,8 +36,8 @@ int save_event_data(int buffer_id, char *data)
     temp.concat(".txt");
     char filename[temp.length() + 1];
     temp.toCharArray(filename, sizeof(filename));
-    if(buffer.available()) {
-      buffer = SD.open(filename, FILE_WRITE);
+    buffer = SD.open(filename, FILE_WRITE);
+    if(buffer) {
       buffer.println(data[0]);
       buffer.close();
     }
@@ -84,7 +84,7 @@ USBPacket process_packet(uint8_t *msg)
     packet.parameters = (msg[0] >> 1) & 0x0F;
     packet.cmd_arg1 = (msg[1] >> 1);
     packet.cmd_arg2 = (msg[2] >> 1);
-    packet.data_size = msg[4] >> 1 + ((msg[3] & 0xFE) << 8);
+    packet.data_size = (msg[4] >> 1) + ((msg[3] & 0xFE) << 8);
     if(packet.data_size > 0) {  
         packet.pkg = &msg[5];
     }
@@ -168,8 +168,7 @@ USBPacket execute_packet(USBPacket *packet)
                         for(j = 0; j < packet->data_size; j++) {
                             mySerial[num].print(data[j]);
                         }
-                        mySerial[num].print("\n");
-                        
+                        mySerial[num].print("\n");      
                         response = usb_ok_packet();
                         break;
                      case INIT_SPI:
@@ -177,12 +176,6 @@ USBPacket execute_packet(USBPacket *packet)
                      case READ_SPI:
                          break;
                      case WRITE_SPI:
-                         break;
-                     case INIT_CAN:
-                         break;
-                     case READ_CAN:
-                         break;
-                     case WRITE_CAN:
                          break;
                 }
             } else {

@@ -4,7 +4,7 @@
 #include "Arduino.h"
 
 #define IS_PIN_DIGITAL(p)       ((p) >= 0 && (p) <= 40)
-#define IS_PIN_ANALOG(p)        ((p) >= 0 && (p) <= 40)
+#define IS_PIN_ANALOG(p)        ((p) >= 0 && (p) <= 15)
 #define IS_PIN_PWM(p)           digitalPinHasPWM(p)
 
 #define MAX_SERVO 2
