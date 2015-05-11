@@ -1,0 +1,313 @@
+#include "assets.h"
+
+int getManifestFromAPK(char *apkname, unsigned char **manifest) 
+{
+    FILE *apk;
+    int retval;
+    JZFileHeader header;
+    char filename[1024];
+    unsigned char *data;
+    if(!(apk = fopen(apkname, "rb"))) {
+        printf("Error opening APK file\n");
+        return 0;
+    }
+    while(1) {
+        if(jzReadLocalFileHeader(apk, &header, filename, sizeof(filename))) {
+            printf("Couldn't read local file header!\n");
+            goto errorClose;
+        }
+        if(!strcmp(filename, "AndroidManifest.xml")) {
+            printf("AndroidManifest found!\n");
+            break;
+        }
+    }
+    if((data = (unsigned char *)malloc(header.uncompressedSize)) == NULL) {
+        printf("Couldn't allocate memory!\n");
+        goto errorClose;
+    }    
+    if(jzReadData(apk, &header, data) != Z_OK) {
+        printf("Couldn't read file data!\n");
+        goto errorClose;
+    }
+    *manifest = data;
+    printf("AndroidManifest extracted correctly!\n"); 
+    return header.uncompressedSize;
+ 
+errorClose:
+    fclose(apk);
+    return 0;
+}
+
+int LEW(const char *arr, int cb, int off) 
+{
+    return (cb > off + 3) ? ( ((arr[off+3] << 24) & 0xff000000) | ((arr[off+2] << 16) & 0xff0000)
+          | ((arr[off+1] << 8) & 0xff00) | (arr[off] & 0xFF)) : 0;
+}
+
+char *compXmlString(const char* xml, int cb, int sitOff, int stOff, int strInd) 
+{
+    int strOff = stOff + LEW(xml, cb, sitOff + strInd * 4);
+    int strLen = ((xml[strOff+1] << 8) & 0xff00) | (xml[strOff] & 0xff);
+    char *chars;
+    if(strInd < 0 | cb < strOff + 2) { 
+        return "";
+    } else {
+        chars = malloc(strLen + 1);
+        chars[strLen] = 0;
+        int i;
+        for (i = 0; i < strLen; i++) {
+            if (cb < strOff + 2 + i * 2) {
+                chars[i] = 0;
+                break;
+            }
+            chars[i] = xml[strOff + 2 + i*2];
+        }
+        return chars;
+    }
+}
+
+/* converted from a Java function on this link */
+/* http://stackoverflow.com/questions/2097813/
+how-to-parse-the-androidmanifest-xml-file-inside-an-apk-package */
+char *decompressXML(const char *xml, int cb) 
+{
+
+    int endDocTag = 0x00100101;
+    int startTag =  0x00100102;
+    int endTag =    0x00100103;
+
+    int numbStrings = LEW(xml, cb, 4 * 4);
+    int sitOff = 0x24;
+    int stOff = sitOff + numbStrings*4;
+    int xmlTagOff = LEW(xml, cb, 3 * 4);
+
+    int i;
+    for (i = xmlTagOff; i < cb - 4; i += 4) {
+        if (LEW(xml, cb, i) == startTag) { 
+            xmlTagOff = i;  
+            break;
+        }
+    }
+    int off = xmlTagOff;
+    int indent = 0;
+    int startTagLineNo = -2;
+
+    char *result = malloc(MAX_XML_SIZE);
+
+    while (off < cb) {
+        int tag0 = LEW(xml, cb, off);
+        int lineNo = LEW(xml, cb, off + 2*4);
+        int nameSi = LEW(xml, cb, off + 5*4);
+        int nameNsSi = LEW(xml, cb, off + 4*4);
+      
+        if (tag0 == startTag) { 
+            int tag6 = LEW(xml, cb, off + 6*4);  
+            int numbAttrs = LEW(xml, cb, off + 7*4);  
+            off += 9*4;  
+            char *name = compXmlString(xml, cb, sitOff, stOff, nameSi);
+            startTagLineNo = lineNo;
+            char *sb;
+            char *concat = "";
+            int ii;
+            for (ii = 0; ii < numbAttrs; ii++) {
+                int attrNameNsSi = LEW(xml, cb, off);
+                int attrNameSi = LEW(xml, cb, off + 1*4);
+                int attrValueSi = LEW(xml, cb, off + 2*4);
+                int attrFlags = LEW(xml, cb, off + 3*4);  
+                int attrResId = LEW(xml, cb, off + 4*4); 
+                off += 5*4; 
+                char *attrName = compXmlString(xml, cb, sitOff, stOff, attrNameSi);
+                char *attrValue = (attrValueSi != -1) ? 
+                    compXmlString(xml, cb, sitOff, stOff, attrValueSi) : "0x00000000";
+                asprintf(&concat, "%s %s=\"%s\"", concat, attrName, attrValue);    
+            }
+            asprintf(&result, "%s<%s%s>\n",result, name, concat);
+            indent++;
+        } else if (tag0 == endTag) { // XML END TAG
+            indent--;
+            off += 6*4;  // Skip over 6 words of endTag data
+            char *name = compXmlString(xml, cb, sitOff, stOff, nameSi);
+            asprintf(&result, "%s</%s>\n",result, name);
+        } else if (tag0 == endDocTag) {  // END OF XML DOC TAG
+            break;
+        } else {
+            printf("Unrecognized tag code\n");
+            break;
+        }
+    } 
+    return result;
+} 
+
+char **getPermissionsFromManifest(unsigned char *data, int size, int *results)
+{
+    char * source = decompressXML((const char *)data, size);
+    char * tofind = "<permission label=\"([^\"]+)";
+    size_t maxMatches = 5;
+      
+    regex_t regexCompiled;
+    regmatch_t groupArray[2];
+    unsigned int m;
+    char * cursor;
+
+    char **matches = malloc(maxMatches * sizeof(char *));
+     
+    if (regcomp(&regexCompiled, tofind, REG_EXTENDED)) {
+        printf("Could not compile REGEX.\n");
+        return NULL;
+    };
+
+    cursor = source;
+    for (m = 0; m < maxMatches; m ++) {
+        if (regexec(&regexCompiled, cursor, 2, groupArray, 0)) {
+            break;  // No more matches
+        }     
+        unsigned int offset = 0;
+        offset = groupArray[0].rm_eo;
+        char cursorCopy[strlen(cursor) + 1];
+        strcpy(cursorCopy, cursor);
+        cursorCopy[groupArray[1].rm_eo] = 0;
+      
+        asprintf(&matches[m], "%s", cursorCopy + groupArray[1].rm_so);
+        cursor += offset;
+    }
+    *results = m;
+    regfree(&regexCompiled);
+    return matches;
+}
+
+sqlite3 *openDb(char *dbName)
+{       
+    int rc;
+    sqlite3 *db;
+    rc = sqlite3_open(dbName, &db);
+    if(rc) {
+        printf("Can't open database: %s\n", sqlite3_errmsg(db));
+        return NULL;
+    } else {
+        printf("Opened database successfully\n");
+        return db;
+    }
+}
+
+int createTable(sqlite3 *db)
+{
+
+    int rc;
+    char *zErrMsg = 0;
+
+    char *sql = "CREATE TABLE PERMISSIONS (       " \
+                "ID INT PRIMARY KEY     NOT NULL, " \
+                "NAME           TEXT    NOT NULL, " \
+                "TIME           INT     NOT NULL, " \
+                "EXPIRES        INT     NOT NULL);";
+
+    rc = sqlite3_exec(db, sql, NULL, 0, &zErrMsg);
+
+    if(rc != SQLITE_OK) {
+        printf("SQL error: %s\n", zErrMsg);
+        sqlite3_free(zErrMsg);
+        return -1;
+    } else {
+        printf("Table created successfully\n");
+        return 0;
+    }
+}
+
+int insertPermissionDb(sqlite3 *db, char *permissionName)
+{
+
+    int rc;
+    char *zErrMsg = 0;
+
+    char *sql = "INSERT INTO PERMISSIONS (ID, NAME, TIME, EXPIRES) "  \
+          "VALUES (1, 'i2c_bus', 1, 1); ";
+
+    rc = sqlite3_exec(db, sql, NULL, 0, &zErrMsg);
+    if( rc != SQLITE_OK ){
+        printf("SQL error: %s\n", zErrMsg);
+        sqlite3_free(zErrMsg);
+        return -1;
+    }else{
+        printf("Records created successfully\n");
+        return 0;
+    }
+}
+
+int deletePermissionDb(sqlite3 *db, char *permissionName)
+{
+    sqlite3_stmt *stmt;
+
+    int rc = sqlite3_prepare_v2(db, "DELETE FROM PERMISSIONS         " \
+                                    "WHERE NAME = ?", -1, &stmt, NULL );
+    if(rc != SQLITE_OK) {
+        //throw string(sqlite3_errmsg(db));
+        return -1;
+    }
+
+    rc = sqlite3_bind_text(stmt, 1, permissionName, -1, 0);    
+    if(rc != SQLITE_OK) {                 
+        //string errmsg(sqlite3_errmsg(db)); 
+        sqlite3_finalize(stmt);            
+        return -1;
+    }
+
+    rc = sqlite3_step(stmt);
+    if(rc != SQLITE_ROW && rc != SQLITE_DONE) {
+        //string errmsg(sqlite3_errmsg(db));
+        sqlite3_finalize(stmt);
+        return -1;
+    }
+
+    if(rc == SQLITE_DONE) {
+        sqlite3_finalize(stmt);
+        printf("Done deleting\n");
+        return 1;
+    }
+
+    sqlite3_finalize(stmt);
+
+    return 0;
+}
+
+int matchPermissionDb(sqlite3 *db, char *permissionName)
+{
+
+    sqlite3_stmt *stmt;
+
+    int rc = sqlite3_prepare_v2(db, "SELECT NAME, TIME, EXPIRES"       \
+                                    " FROM PERMISSIONS"                \
+                                    " WHERE NAME = ?", -1, &stmt, NULL );
+    if(rc != SQLITE_OK) {
+        //throw string(sqlite3_errmsg(db));
+    }
+
+    rc = sqlite3_bind_text(stmt, 1, permissionName, -1, 0);    
+    if(rc != SQLITE_OK) {                 
+        //string errmsg(sqlite3_errmsg(db)); 
+        sqlite3_finalize(stmt);            
+        return -1;
+    }
+
+    rc = sqlite3_step(stmt);
+    if(rc != SQLITE_ROW && rc != SQLITE_DONE) {
+        //string errmsg(sqlite3_errmsg(db));
+        sqlite3_finalize(stmt);
+        return -1;
+    }
+
+    if(rc == SQLITE_DONE) {
+        sqlite3_finalize(stmt);
+        printf("No match found\n");
+        return 1;
+    }
+
+    char *a = (char *) sqlite3_column_text(stmt, 0);
+    int tim = sqlite3_column_int(stmt, 1);
+    int exx = sqlite3_column_int(stmt, 2);
+
+    printf("NAME: %s, TIME: %d, EXPIRES: %d\n", a, tim, exx);
+
+    sqlite3_finalize(stmt);
+
+    return 0;
+}
