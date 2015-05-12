@@ -8,43 +8,13 @@
 #endif
 
 typedef enum MCSCommand {
-    MCS_MESSAGE_PROCMAN_3 = 0,
-    MCS_MESSAGE_PROCMAN_2 = 1,
-    MCS_MESSAGE_PROCMAN_1 = 2,
-    MCS_STATE_TEMPERATURE_ARDUINO3 = 65539,
-    MCS_STATE_TEMPERATURE_ARDUINO2 = 65540,
-    MCS_STATE_TEMPERATURE_ARDUINO1 = 65541,
-    MCS_PAYLOAD_ARDUINO_GET_PIN3 = 131078,
-    MCS_PAYLOAD_ARDUINO_GET_PIN2 = 131079,
-    MCS_PAYLOAD_ARDUINO_GET_PIN1 = 131080,
+    MCS_SPAYLOAD_ARDUINO_GET_PIN = 131074,
+    MCS_STATE_TEMPERATURE_ARDUINO1 = 65537,
+    MCS_MESSAGE_PROCMAN_1 = 0,
 } MCSCommand;
 
-const static struct MCSCommandOptionsMessage mcs_command_message_list[] =
+static const struct MCSCommandOptionsMessage mcs_command_message_list[] =
 {
-    {
-    .cmd = {
-        .name = "procman_3",
-        /*Start the Process Manager*/
-        .nargs = 0,
-        .raw_data = false,
-        .response_size = 0,
-    },
-    .destination = "procman",
-    .origin_groups = {syscore},
-    .destination_groups = NULL,
-    },
-    {
-    .cmd = {
-        .name = "procman_2",
-        /*Start the Process Manager*/
-        .nargs = 0,
-        .raw_data = false,
-        .response_size = 0,
-    },
-    .destination = "procman",
-    .origin_groups = {syscore},
-    .destination_groups = NULL,
-    },
     {
     .cmd = {
         .name = "procman_1",
@@ -54,47 +24,15 @@ const static struct MCSCommandOptionsMessage mcs_command_message_list[] =
         .response_size = 0,
     },
     .destination = "procman",
-    .origin_groups = {syscore},
-    .destination_groups = NULL,
+    .origin_groups = {syscore, second_group},
+    .destination_groups = {destination2, destination2},
     },
 };
 
-#define mcs_command_message_list_size 3
+#define mcs_command_message_list_size 1
 
-const static struct MCSCommandOptionsState mcs_command_state_list[] =
+static const struct MCSCommandOptionsState mcs_command_state_list[] =
 {
-    {
-    .cmd = {
-        .name = "temperature_arduino3",
-        /*Get temperature from the embedded sensor in the Arduino board*/
-        .nargs = 1,
-        .raw_data = false,
-        .response_size = 8,
-    },
-    .request = get_sensor_value_arduino (1),
-    .dimensions = 1,
-    /*Unit: K/
-    /*Dimension_name: NULL*/
-    .expire_group = {
-            { .group = app, .max_espire = 15 },
-        },
-    },
-    {
-    .cmd = {
-        .name = "temperature_arduino2",
-        /*Get temperature from the embedded sensor in the Arduino board*/
-        .nargs = 1,
-        .raw_data = false,
-        .response_size = 8,
-    },
-    .request = get_sensor_value_arduino (1),
-    .dimensions = 1,
-    /*Unit: K/
-    /*Dimension_name: NULL*/
-    .expire_group = {
-            { .group = app, .max_espire = 15 },
-        },
-    },
     {
     .cmd = {
         .name = "temperature_arduino1",
@@ -113,51 +51,25 @@ const static struct MCSCommandOptionsState mcs_command_state_list[] =
     },
 };
 
-#define mcs_command_state_list_size 3
+#define mcs_command_state_list_size 1
 
-const static struct MCSCommandOptionsPayload mcs_command_payload_list[] =
+static const struct MCSCommandOptionsPayload mcs_command_payload_list[] =
 {
     {
     .cmd = {
-        .name = "arduino_get_pin3",
+        .name = "arduino_get_pin",
         /*Get the value of the given pin in the Arduino board*/
         .nargs = 1,
         .raw_data = false,
         .response_size = 1,
     },
-    .command = "001",
-    .parameters = "0110",
-    .arguments = "@arg0",
-    .data = NULL,
-    },
-    {
-    .cmd = {
-        .name = "arduino_get_pin2",
-        /*Get the value of the given pin in the Arduino board*/
-        .nargs = 1,
-        .raw_data = false,
-        .response_size = 1,
-    },
-    .command = "001",
-    .parameters = "0110",
-    .arguments = "@arg0",
-    .data = NULL,
-    },
-    {
-    .cmd = {
-        .name = "arduino_get_pin1",
-        /*Get the value of the given pin in the Arduino board*/
-        .nargs = 1,
-        .raw_data = false,
-        .response_size = 1,
-    },
-    .command = "001",
-    .parameters = "0110",
-    .arguments = "@arg0",
+    .command = 1,
+    .parameters = 6,
+    .arguments = "@0",
     .data = NULL,
     },
 };
 
-#define mcs_command_payload_list_size 3
+#define mcs_command_payload_list_size 1
 
 #endif
