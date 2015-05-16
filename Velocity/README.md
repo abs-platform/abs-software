@@ -6,7 +6,7 @@ This code has been crafted to test three things:
 0. Compute the velocity of a satellite (using circles) in each of the three axes.
 0. Compute the velocity of a satellite (using rectangles) in each of the three axes and compute how many time is needed by the algorithm to estimate the velocity.
 
-> To do any of the test shown below, you only need to copy the code and paste it in the main of the main.cpp file.
+> To do any test shown below, you only need to copy the code and paste it in the main of the main.cpp file. This program has been tested in Ubuntu Linux 64bit 14.04 with openCV 2.3.1 and images of size 120x120px. Make sure you have already OpenCV 2.3.1 installed on your computer, specifically in your personal folder. Otherwise, you can download it [here](http://opencv.org/downloads.html).
 
 <br>
 
