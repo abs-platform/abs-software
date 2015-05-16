@@ -6,12 +6,12 @@ This code has been crafted to test three things:
 0. Compute the velocity of a satellite (using circles) in each of the three axes.
 0. Compute the velocity of a satellite (using rectangles) in each of the three axes and compute how many time is needed by the algorithm to estimate the velocity.
 
-> To do any test shown below, you only need to copy the code and paste it in the main of the main.cpp file. This program has been tested in Ubuntu Linux 64bit 14.04 with openCV 2.3.1 and images of size 120x120px. Make sure you have already OpenCV 2.3.1 installed on your computer, specifically in your personal folder. Otherwise, you can download it [here](http://opencv.org/downloads.html).
+> To do any test shown below, you only need to copy the code and paste it in the main of the main.cpp file. This program has been tested in Ubuntu 64bit 14.04 with openCV 2.3.1 and images of size 120x120px. Make sure you have already installed OpenCV 2.3.1 on your computer, specifically in your personal folder. Otherwise, you can download it [here](http://opencv.org/downloads.html).
 
 <br>
 
 ### Test 1 - Draw a circle in an image an save the results
-This algorithm receive the parameters of the square in which the detection algorithm finds the satellite. Since the velocity estimation works with circles, a conversion from rectangle to circle is made. After that, it draws a circle in an image and save the results. (To do the test, the corresponding parameters will be defined manually)
+This algorithm receives the parameters of the square in which the detection algorithm finds the satellite. Since the velocity estimation works with circles, a conversion from rectangle to circle is made. After that, it draws a circle in an image and save the results. (To do the test, the corresponding parameters will be defined manually)
 
 ```
 Mat imageData = imread("background.png", CV_LOAD_IMAGE_COLOR);
@@ -25,7 +25,7 @@ imwrite("result.png",imageData);
 <br>
 
 ### Test 2 - Compute the velocity of a satellite (using circles)
-This algorithm receive the parameters of the circles in which the detection algorithm finds the satellite of the first and the second photograph taken by the mobile phone camera. Considering both circles, it computes the velocity in each axis and shows the results.
+This algorithm receives the parameters of the circles in which the detection algorithm finds the satellite of the first and the second photograph taken by the mobile phone camera. Considering both circles, it computes the velocity in each axis and shows the results.
 
 ```
 float sample_time = 2.0;		//Sample time in miliseconds
@@ -49,7 +49,7 @@ printf("Velocity in Z: %.2f m/s\n", velocity.velZ);
 <br>
 
 ### Test 3 - Compute velocity (using rectangles) and time elapsed
-This algorithm receive the parameters of the rectangles in which the detection algorithm finds the satellite of the first and the second photograph taken by the mobile phone camera. Then, a conversion from rectangle to circle is made. Considering both circles, it computes the velocity in each axis. Moreover, it computes the time elapsed to estimate the velocity. Finally, it shows the results regarding both the velocity and the time elapsed.
+This algorithm receives the parameters of the rectangles in which the detection algorithm finds the satellite of the first and the second photograph taken by the mobile phone camera. Then, a conversion from rectangle to circle is made. Considering both circles, it computes the velocity in each axis. Moreover, it computes the time elapsed to estimate the velocity. Finally, it shows the results regarding both the velocity and the time elapsed.
 
 ```
 double time_elapsed;
