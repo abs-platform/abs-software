@@ -159,7 +159,7 @@ USBPacket execute_packet(USBPacket *packet)
                         mySerial[num].begin(packet->cmd_arg2); 
                         break;
                     case READ_UART:
-                        data = (char *) mySerial[num].read();
+                        data =  (char *) mySerial[num].read();
                         response = usb_ok_data_packet(NULL, data, 1);
                         break;
                     case WRITE_UART:

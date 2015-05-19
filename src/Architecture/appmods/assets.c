@@ -1,4 +1,12 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <zlib.h>
+#include <regex.h>
+
 #include "assets.h"
+
+#define printf_dbg printf 
 
 int getManifestFromAPK(char *apkname, unsigned char **manifest) 
 {
@@ -8,16 +16,16 @@ int getManifestFromAPK(char *apkname, unsigned char **manifest)
     char filename[1024];
     unsigned char *data;
     if(!(apk = fopen(apkname, "rb"))) {
-        printf("Error opening APK file\n");
+        printf_dbg("Error opening APK file\n");
         return 0;
     }
     while(1) {
         if(jzReadLocalFileHeader(apk, &header, filename, sizeof(filename))) {
-            printf("Couldn't read local file header!\n");
+            printf_dbg("Couldn't read local file header!\n");
             goto errorClose;
         }
         if(!strcmp(filename, "AndroidManifest.xml")) {
-            printf("AndroidManifest found!\n");
+            printf_dbg("AndroidManifest found!\n");
             break;
         }
     }
@@ -26,11 +34,11 @@ int getManifestFromAPK(char *apkname, unsigned char **manifest)
         goto errorClose;
     }    
     if(jzReadData(apk, &header, data) != Z_OK) {
-        printf("Couldn't read file data!\n");
+        printf_dbg("Couldn't read file data!\n");
         goto errorClose;
     }
     *manifest = data;
-    printf("AndroidManifest extracted correctly!\n"); 
+    printf_dbg("AndroidManifest extracted correctly!\n"); 
     return header.uncompressedSize;
  
 errorClose:
@@ -131,7 +139,7 @@ char *decompressXML(const char *xml, int cb)
         } else if (tag0 == endDocTag) {  // END OF XML DOC TAG
             break;
         } else {
-            printf("Unrecognized tag code\n");
+            printf_dbg("Unrecognized tag code\n");
             break;
         }
     } 
@@ -152,7 +160,7 @@ char **getPermissionsFromManifest(unsigned char *data, int size, int *results)
     char **matches = malloc(maxMatches * sizeof(char *));
      
     if (regcomp(&regexCompiled, tofind, REG_EXTENDED)) {
-        printf("Could not compile REGEX.\n");
+        printf_dbg("Could not compile REGEX.\n");
         return NULL;
     };
 
@@ -181,63 +189,84 @@ sqlite3 *openDb(char *dbName)
     sqlite3 *db;
     rc = sqlite3_open(dbName, &db);
     if(rc) {
-        printf("Can't open database: %s\n", sqlite3_errmsg(db));
+        printf_dbg("Can't open database: %s\n", sqlite3_errmsg(db));
         return NULL;
     } else {
-        printf("Opened database successfully\n");
+        printf_dbg("Opened database successfully\n");
         return db;
     }
 }
 
-int createTable(sqlite3 *db)
+int createPermissionsTable(sqlite3 *db)
 {
-
     int rc;
     char *zErrMsg = 0;
 
+    rc = sqlite3_open("permissions.db", &db);
+    if(rc) {
+        printf_dbg("Can't open database: %s\n", sqlite3_errmsg(db));
+    } else {
+        printf_dbg("Opened database successfully\n");
+    }
+
     char *sql = "CREATE TABLE PERMISSIONS (       " \
-                "ID INT PRIMARY KEY     NOT NULL, " \
-                "NAME           TEXT    NOT NULL, " \
-                "TIME           INT     NOT NULL, " \
-                "EXPIRES        INT     NOT NULL);";
+                "ID             INTEGER NOT NULL, " \
+                "NAME           TEXT    NOT NULL );";
 
     rc = sqlite3_exec(db, sql, NULL, 0, &zErrMsg);
 
     if(rc != SQLITE_OK) {
-        printf("SQL error: %s\n", zErrMsg);
+        printf_dbg("SQL error: %s\n", zErrMsg);
         sqlite3_free(zErrMsg);
         return -1;
     } else {
-        printf("Table created successfully\n");
+        printf_dbg("Table created successfully\n");
         return 0;
     }
 }
 
 int insertPermissionDb(sqlite3 *db, char *permissionName)
 {
+    int rc = 0;
+    char *query = NULL;
+    sqlite3_stmt *stmt;
 
-    int rc;
-    char *zErrMsg = 0;
-
-    char *sql = "INSERT INTO PERMISSIONS (ID, NAME, TIME, EXPIRES) "  \
-          "VALUES (1, 'i2c_bus', 1, 1); ";
-
-    rc = sqlite3_exec(db, sql, NULL, 0, &zErrMsg);
-    if( rc != SQLITE_OK ){
-        printf("SQL error: %s\n", zErrMsg);
-        sqlite3_free(zErrMsg);
-        return -1;
-    }else{
-        printf("Records created successfully\n");
-        return 0;
+    rc = sqlite3_open("permissions.db", &db);
+    if(rc) {
+        printf_dbg("Can't open database: %s\n", sqlite3_errmsg(db));
+    } else {
+        printf_dbg("Opened database successfully\n");
     }
+
+    asprintf(&query, "insert into PERMISSIONS (ID, NAME) values (1, 'digital_write');");        
+
+    sqlite3_prepare_v2(db, query, strlen(query), &stmt, NULL);                             
+
+    rc = sqlite3_step(stmt);
+    if(rc != SQLITE_DONE) {
+        printf("ERROR inserting data: %s\n", sqlite3_errmsg(db));
+        return -1;
+    }
+
+    sqlite3_finalize(stmt);
+    free(query);
+    return 0;
 }
 
 int deletePermissionDb(sqlite3 *db, char *permissionName)
 {
     sqlite3_stmt *stmt;
 
-    int rc = sqlite3_prepare_v2(db, "DELETE FROM PERMISSIONS         " \
+    int rc;
+
+    rc = sqlite3_open("permissions.db", &db);
+    if(rc) {
+        printf_dbg("Can't open database: %s\n", sqlite3_errmsg(db));
+    } else {
+        printf_dbg("Opened database successfully\n");
+    }
+
+    rc = sqlite3_prepare_v2(db, "DELETE FROM PERMISSIONS         " \
                                     "WHERE NAME = ?", -1, &stmt, NULL );
     if(rc != SQLITE_OK) {
         //throw string(sqlite3_errmsg(db));
@@ -260,7 +289,7 @@ int deletePermissionDb(sqlite3 *db, char *permissionName)
 
     if(rc == SQLITE_DONE) {
         sqlite3_finalize(stmt);
-        printf("Done deleting\n");
+        printf_dbg("Done deleting\n");
         return 1;
     }
 
@@ -273,15 +302,23 @@ int matchPermissionDb(sqlite3 *db, char *permissionName)
 {
 
     sqlite3_stmt *stmt;
+    int rc;
 
-    int rc = sqlite3_prepare_v2(db, "SELECT NAME, TIME, EXPIRES"       \
-                                    " FROM PERMISSIONS"                \
-                                    " WHERE NAME = ?", -1, &stmt, NULL );
-    if(rc != SQLITE_OK) {
-        //throw string(sqlite3_errmsg(db));
+    rc = sqlite3_open("permissions.db", &db);
+    if(rc) {
+        printf_dbg("Can't open database: %s\n", sqlite3_errmsg(db));
+    } else {
+        printf_dbg("Opened database successfully\n");
     }
 
-    rc = sqlite3_bind_text(stmt, 1, permissionName, -1, 0);    
+    rc = sqlite3_prepare_v2(db, "SELECT ID"                        \
+                                " FROM PERMISSIONS"                \
+                                " WHERE NAME = ?", -1, &stmt, NULL );
+    if(rc != SQLITE_OK) {
+        return -1;
+    }
+
+    rc = sqlite3_bind_text(stmt, 1, "digital_write", -1, 0);    
     if(rc != SQLITE_OK) {                 
         //string errmsg(sqlite3_errmsg(db)); 
         sqlite3_finalize(stmt);            
@@ -297,7 +334,7 @@ int matchPermissionDb(sqlite3 *db, char *permissionName)
 
     if(rc == SQLITE_DONE) {
         sqlite3_finalize(stmt);
-        printf("No match found\n");
+        printf_dbg("No match found\n");
         return 1;
     }
 
@@ -305,7 +342,7 @@ int matchPermissionDb(sqlite3 *db, char *permissionName)
     int tim = sqlite3_column_int(stmt, 1);
     int exx = sqlite3_column_int(stmt, 2);
 
-    printf("NAME: %s, TIME: %d, EXPIRES: %d\n", a, tim, exx);
+    printf_dbg("NAME: %s, TIME: %d, EXPIRES: %d\n", a, tim, exx);
 
     sqlite3_finalize(stmt);
 

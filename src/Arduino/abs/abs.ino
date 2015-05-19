@@ -10,6 +10,7 @@ Servo myServo[MAX_SERVO];
 SoftwareSerial mySerial[MAX_SERIAL] = {SoftwareSerial(10,11), SoftwareSerial(7,8)};
 
 File buffer;
+char *data;
 uint8_t msg[MAX_PACKET_SIZE];
 uint16_t length;
 USBPacket packet;
@@ -30,7 +31,7 @@ ADK adk(&Usb, "UPC, BarcelonaTech",
 
 void setup(void)
 {
-    Serial.begin(115200);
+    Serial.begin(SERIAL_BITRATE);
     //while(!Serial); 
     Serial.println("\r\nArduino firmware start");
         
@@ -38,13 +39,13 @@ void setup(void)
         Serial.println("OSCOKIRQ failed to assert");
         while(Usb.Init() == -1); /* retry */
     }
-    Timer1.initialize(500000);
+    Timer1.initialize(TIMER_INTERVAL);
     Timer1.pwm(9, 512);
     Timer1.attachInterrupt(events_routine);
     
-    pinMode(3, OUTPUT);
+    pinMode(SD_CS, OUTPUT);
    
-    if (!SD.begin(3)) {
+    if (!SD.begin(SD_CS)) {
         Serial.println("Error initializing SDcard");
     }
 }
@@ -56,7 +57,6 @@ void loop(void)
     if(!adk.isReady()) { 
         return; /* restart Arduino firmware */
     }
-    
     length = sizeof(msg);
     adk.RcvData(&length, msg);
     if(length > 0) {

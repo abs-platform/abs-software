@@ -7,9 +7,9 @@
 #include "JUnzip/JUnzip.h"
 #include "sqlite/sqlite3.h"
 
-int init(void);
-int setup(void);
-int run(void);
-int halt(void);
+int init(sqlite3 *db, char *filename);
+int setup(sqlite3 *db, char *filename);
+int run(sqlite3 *db, char *filename);
+int halt(sqlite3 *db, char *filename);
 
 #endif /* __APPMOD_H */
