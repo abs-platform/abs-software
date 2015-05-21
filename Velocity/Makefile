@@ -4,7 +4,7 @@ INCLUDES = -lopencv_core -lopencv_imgproc -lopencv_highgui -lopencv_ml -lopencv_
 		   -lopencv_legacy
 
 all:
-	g++ $(PATHS) -g main.cpp -o main -Wall $(INCLUDES)
+	g++ $(PATHS) -g velocity.cpp -o velocity -Wall $(INCLUDES)
 
 clean:
-	rm main
+	rm velocity
