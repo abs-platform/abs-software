@@ -20,6 +20,6 @@ static void getFilesInDirectory(const string &dirName, vector<string> &fileNames
                                 const vector<string> &validExtensions);
 static void showDetections(const vector<Rect> &found, Mat &imageData);
 static void detectSat(const HOGDescriptor &hog, const double hitThreshold, Mat &imageData);
-static void getDescriptorVectorFromFile(string& filename, vector<float>& descriptorVector);
+static void getDescriptorVectorFromFile(string &filename, vector<float> &descriptorVector);
 
 #endif
