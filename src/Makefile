@@ -1,4 +1,4 @@
-SUBDIRS = Libraries MCS SDB
+SUBDIRS = Architecture
 
 SUBTEST = $(addsuffix .test,$(SUBDIRS))
 SUBCLEAN = $(addsuffix .clean,$(SUBDIRS))
