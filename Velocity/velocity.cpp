@@ -37,17 +37,17 @@ int main(int argc, char *argv[])
 
     Rect rectangle1 = Rect(MAX_ROWS/4, MAX_COLS/4, 30, 30);
     Rect rectangle2 = Rect(MAX_ROWS/2, MAX_COLS/4, 40, 40);
-	
+    
     CircleData c1;
-	CircleData c2;
+    CircleData c2;
     rectToCircle(rectangle1, c1);
     rectToCircle(rectangle2, c2);
 
     Velocity velocity;
     clock_t begin = clock();
     velocityXYZ(velocity, c1, c2, sample_time);
-  	clock_t end = clock();
-	
+    clock_t end = clock();
+    
     time_elapsed = double(end - begin) / CLOCKS_PER_SEC;
 
     printf("Velocity in X: %.2f m/s\n", velocity.velX);
