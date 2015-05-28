@@ -56,10 +56,22 @@ public class Item
     }
 
     /**
-     * Gets the activity name to be run when an item is clicked
-     * @return The name of the activity
+     * Gets the activity package classpath to be run when an item is clicked
+     * @return The name of the activity package path
      */
     public String get_activity()
+    {
+        if(this.get_activity_name() != null)
+            return "abs.com.test.appmodule.activities." + this.get_activity_name();
+
+        return null;
+    }
+
+    /**
+     * Gets the activity name
+     * @return The name of the activity
+     */
+    public String get_activity_name()
     {
         String id = this.get_id();
 
@@ -68,7 +80,7 @@ public class Item
             of the file */
             String capId = id.substring(0, 1).toUpperCase() + id.substring(1);
 
-            return "abs.com.test.appmodule.activities." + capId + "Activity";
+            return capId + "Activity";
         }
 
         return null;

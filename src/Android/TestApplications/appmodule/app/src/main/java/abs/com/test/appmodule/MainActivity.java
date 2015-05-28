@@ -12,7 +12,6 @@ import android.widget.ListView;
 import java.util.ArrayList;
 import java.util.List;
 
-import abs.com.test.appmodule.R;
 import abs.com.test.appmodule.classes.Item;
 import abs.com.test.appmodule.classes.ItemAdapter;
 import abs.com.test.appmodule.services.TestService;
@@ -20,7 +19,6 @@ import abs.com.test.appmodule.services.TestService;
 
 public class MainActivity extends Activity
 {
-
     public ListView listView;
 
     @Override
@@ -74,11 +72,11 @@ public class MainActivity extends Activity
     {
         List<Item> items = new ArrayList<>();
 
-        items.add(new Item("sdb", "SDB connection"));
-        items.add(new Item("arduino", "Arduino"));
-        items.add(new Item("battery", "Battery State"));
-        items.add(new Item("memory", "Memory Usage"));
-        items.add(new Item("cpu", "CPU Usage"));
+        items.add(new Item("latency", "Latency"));
+        items.add(new Item("latencydata", "Latency with variable data"));
+        items.add(new Item("events", "Event collision"));
+        items.add(new Item("services", "Multiple services"));
+        items.add(new Item("app-msg", "Inter-app messages"));
 
         return items;
     }
@@ -89,8 +87,7 @@ public class MainActivity extends Activity
     private AdapterView.OnItemClickListener itemClickHandler() {
         return new AdapterView.OnItemClickListener() {
             @Override
-            public void onItemClick(AdapterView<?> parent, View view,
-                                    int position, long id)
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id)
             {
                 /* Identify the item that is clicked */
                 Item item = (Item) parent.getItemAtPosition(position);
@@ -99,9 +96,9 @@ public class MainActivity extends Activity
                 try {
                     Class c = Class.forName(item.get_activity());
                     Intent intent = new Intent(MainActivity.this, c);
-                    /* Get the item id and pass it to the activity to know
-                    which test to start */
+                    /* Get the item id and pass it to the activity to know which test to start */
                     intent.putExtra("id", item.get_id());
+                    intent.putExtra("activity", item.get_activity());
 
                     startActivity(intent);
                 } catch (ClassNotFoundException e) {

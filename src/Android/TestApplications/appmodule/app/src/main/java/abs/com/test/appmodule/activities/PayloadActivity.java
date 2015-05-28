@@ -1,10 +1,5 @@
 package abs.com.test.appmodule.activities;
 
-
-import abs.com.test.appmodule.R;
-import abs.com.test.appmodule.services.TestService.LocalBinder;
-import abs.com.test.appmodule.services.TestService;
-
 import android.app.Activity;
 import android.content.ComponentName;
 import android.content.Context;
@@ -16,44 +11,47 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 
-public class ArduinoActivity extends Activity
-{
+import abs.com.test.appmodule.R;
+import abs.com.test.appmodule.services.TestService;
 
+/**
+ * Base class from which all test activities extend
+ */
+public class PayloadActivity  extends Activity
+{
     public TestService mService;
     public boolean mBound = false;
+    public String testID;
 
     /**
      * Variable to manage the service binding
      */
-    private ServiceConnection mConnection;
+    protected ServiceConnection mConnection;
 
 
-    public ArduinoActivity()
+    public PayloadActivity()
     {
-        /* Initialize the binding manager variable overriding some of the
-        ServiceConnection class methods */
+        /* Initialize the binding manager variable overriding some of the ServiceConnection class
+         methods */
         mConnection = new ServiceConnection()
         {
             /**
              * Called when the connection with the service is established
-             * @param className
-             * @param service
+             * @param className ComponentName
+             * @param service IBinder
              */
             @Override
-            public void onServiceConnected(ComponentName className,
-                                           IBinder service)
+            public void onServiceConnected(ComponentName className, IBinder service)
             {
-                /* Because we have bound to an explicit service that is running
-                in our own process, we can cast its IBinder to a concrete class
-                and directly access it */
-                mService = ((LocalBinder) service).getService();
+                /* Because we have bound to an explicit service that is running in our own process,
+                we can cast its IBinder to a concrete class and directly access it */
+                mService = ((TestService.LocalBinder) service).getService();
                 mBound = true;
             }
 
             /**
-             * Called when the connection with the service disconnects
-             * unexpectedly
-             * @param className
+             * Called when the connection with the service disconnects unexpectedly
+             * @param className ComponentName
              */
             @Override
             public void onServiceDisconnected(ComponentName className) {
@@ -66,10 +64,20 @@ public class ArduinoActivity extends Activity
     protected void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_arduino);
+
+        /* Get the test ID from the extras */
+        if(savedInstanceState == null) {
+            Bundle extras = getIntent().getExtras();
+            if(extras == null)
+                this.testID = null;
+            else
+                this.testID = extras.getString("id");
+        } else {
+            this.testID = (String) savedInstanceState.getSerializable("id");
+        }
 
         /* Start the service on creating the activity */
-        Intent service = new Intent(ArduinoActivity.this, TestService.class);
+        Intent service = new Intent(this, TestService.class);
         startService(service);
 
         /* Bind to the service so that we can interact with it */
@@ -95,16 +103,14 @@ public class ArduinoActivity extends Activity
 
     /**
      * Called when the check button is clicked
-     * @param v
+     * @param v View
      */
     public void onButtonClick(View v)
     {
-        /* If the service is bound... */
-        if (mBound) {
-            /* Call a method from the LocalService. However, if this call were
-            something that might hang, then this request should occur in a
-            separate thread to avoid slowing down the activity performance. */
-            mService.runTest("arduino");
+        /* If the service is bound start the test */
+        if(mBound) {
+            /* Run the test */
+            mService.runTest(this.testID);
         }
     }
 
@@ -119,11 +125,7 @@ public class ArduinoActivity extends Activity
     {
         int id = item.getItemId();
 
-        if (id == R.id.action_settings) {
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
+        return (id == R.id.action_settings) || super.onOptionsItemSelected(item);
     }
 
 }

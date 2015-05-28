@@ -31,8 +31,28 @@
         </activity>
 
         <activity
-            android:name="abs.com.test.appmodule.activities.ArduinoActivity"
-            android:label="@string/title_activity_arduino"
+            android:name="abs.com.test.appmodule.activities.LatencyActivity"
+            android:label="@string/title_activity_latency"
+            android:parentActivityName="abs.com.test.appmodule.MainActivity" >
+            <!-- This supports user navigation for lower level API  -->
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="abs.com.test.appmodule.MainActivity" />
+        </activity>
+
+        <activity
+            android:name="abs.com.test.appmodule.activities.EventsActivity"
+            android:label="@string/title_activity_events"
+            android:parentActivityName="abs.com.test.appmodule.MainActivity" >
+            <!-- This supports user navigation for lower level API  -->
+            <meta-data
+                android:name="android.support.PARENT_ACTIVITY"
+                android:value="abs.com.test.appmodule.MainActivity" />
+        </activity>
+
+        <activity
+            android:name="abs.com.test.appmodule.activities.ServicesActivity"
+            android:label="@string/title_activity_services"
             android:parentActivityName="abs.com.test.appmodule.MainActivity" >
             <!-- This supports user navigation for lower level API  -->
             <meta-data
