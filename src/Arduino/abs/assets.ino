@@ -38,26 +38,33 @@ int save_event_data(int buffer_id, char *data)
     temp.toCharArray(filename, sizeof(filename));
     buffer = SD.open(filename, FILE_WRITE);
     if(buffer) {
-      buffer.println(data[0]);
+      buffer.print((int)data[0]);
       buffer.close();
     }
     return 1;
 }
 
-void dumpData(int buffer_id)
+char dumpData(int buffer_id)
 {
-    noInterrupts();
     String temp = "buffer";
     temp.concat(buffer_id);
-    temp.concat(".txt");
+    temp.concat(".TXT");
     char filename[temp.length() + 1];
     temp.toCharArray(filename, sizeof(filename));
-    File dataFile = SD.open(filename);
+    File dataFile = SD.open(filename);   
+    char data;
     if (dataFile) {
-        adk.SndData(1, (uint8_t *)dataFile.read());
+        noInterrupts();
+        if(dataFile.available()) {  
+          data = dataFile.read();
+        }
+        dataFile.close();
+        interrupts();
+        return data;
+    } else {
+      dataFile.close();
+      return data;
     }
-    dataFile.close();
-    interrupts();
 }
 
 uint8_t *to_raw(USBPacket packet, uint16_t *length)
@@ -172,10 +179,22 @@ USBPacket execute_packet(USBPacket *packet)
                         response = usb_ok_packet();
                         break;
                      case INIT_SPI:
+                         SPI.begin();
+                         pinMode(10, OUTPUT);
                          break;
                      case READ_SPI:
+                         digitalWrite(10, LOW);
+                         data = (char *) SPI.transfer(0x00);
+                         response = usb_ok_data_packet(NULL, data, 1);
+                         digitalWrite(10, HIGH);
                          break;
                      case WRITE_SPI:
+                         data = packet->data;
+                         for(j = 0; j < packet->data_size; j++) {
+                             digitalWrite(10, LOW);
+                             SPI.transfer(data[j]);
+                             digitalWrite(10, HIGH);
+                         }      
                          break;
                 }
             } else {
@@ -198,7 +217,8 @@ USBPacket execute_packet(USBPacket *packet)
                     break;
                 case DUMP:
                     Serial.println("Dump event");
-                    dumpData(packet->cmd_arg1);
+                    response = usb_ok_data_packet(dumpData(0), NULL, 1);
+                    //response = usb_ok_data_packet(dumpData(packet->cmd_arg1), NULL, 1);
                     break;
             }
             break;

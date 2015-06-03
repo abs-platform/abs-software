@@ -3,6 +3,7 @@
 #include <TimerOne.h>
 #include <SoftwareSerial.h>
 #include <SD.h>
+#include <SPI.h>
 #include <Servo.h> 
 #include "abs.h"
 

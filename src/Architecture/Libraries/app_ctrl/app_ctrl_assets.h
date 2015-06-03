@@ -1,5 +1,5 @@
-#ifndef __ASSETS_H
-#define __ASSETS_H
+#ifndef __ASSETS_APPMOD_H
+#define __ASSETS_APPMOD_H
 
 #include "sqlite/sqlite3.h"
 #include "JUnzip/junzip.h"
@@ -18,10 +18,14 @@ int closeDb(sqlite3 *db);
 
 int createPermissionsTable(sqlite3 *db);
 
-int insertPermissionDb(sqlite3 *db, char *permissionName);
+int addPermissionDb(sqlite3 *db, char *permissionName);
 
 int deletePermissionDb(sqlite3 *db, char *permissionName);
 
-int matchPermissionDb(sqlite3 *db, char *permissionName);
+int findPermissionDb(sqlite3 *db, char *permissionName);
+
+int deleteApplicationPermissionsdB(sqlite3 *db, char *appName);
+
+int findApplication(sqlite3 *db, char *appName);
 
 #endif
