@@ -1,10 +1,21 @@
-FOLDERS = mcs
+SUBDIRS = ABS MCS Test
 
-FOLDER_TGT=$(addsuffix .rec,$(FOLDERS))
-FOLDER_TGT_CLEAN=$(addsuffix .rec.clean,$(FOLDERS))
+SUBTEST = $(addsuffix .test,$(SUBDIRS))
+SUBCLEAN = $(addsuffix .clean,$(SUBDIRS))
 
-include ../Makefile.inc
+all: $(SUBDIRS)
 
-all: $(FOLDER_TGT)
+test: $(SUBTEST)
 
-clean: $(FOLDER_TGT_CLEAN)
+clean: $(SUBCLEAN)
+
+$(SUBDIRS):
+	$(MAKE) -C $@
+
+$(SUBTEST): %.test:
+	$(MAKE) -C $* test
+
+$(SUBCLEAN): %.clean:
+	$(MAKE) -C $* clean
+
+.PHONY: all clean test $(SUBDIRS) $(SUBCLEAN) $(SUBTEST) 
