@@ -6,6 +6,9 @@ import android.os.Bundle;
 import android.view.View;
 import android.widget.TextView;
 
+/**
+ * Activity for the latency test
+ */
 public class LatencyActivity extends PayloadActivity
 {
     private static final String TAG = "LatencyActivity";
@@ -15,18 +18,6 @@ public class LatencyActivity extends PayloadActivity
     {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_latency);
-    }
-
-    @Override
-    protected void onStart()
-    {
-        super.onStart();
-    }
-
-    @Override
-    protected void onStop()
-    {
-        super.onStop();
     }
 
     /**
@@ -39,7 +30,7 @@ public class LatencyActivity extends PayloadActivity
         /* If the service is bound start the test */
         if(mBound) {
             /* Run the latency test */
-            mService.runTest("latency");
+            mService.runTest(this.testID);
 
             TextView valueTv = (TextView) findViewById(R.id.latency_value_label);
 

@@ -13,11 +13,46 @@
               tools:context=".ServicesActivity" >
 
     <Button
-        android:id="@+id/android_start_test"
+        android:id="@+id/run_consumer_service"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/start_button"
+        android:text="@string/start_consumer_service_button"
         android:layout_gravity="center_horizontal"
-        android:onClick="onButtonClick" />
+        android:onClick="onConsumerButtonClick" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/consumer_service_text" />
+
+    <Button
+        android:id="@+id/run_meas_service"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/start_meas_service_button"
+        android:layout_gravity="center_horizontal"
+        android:onClick="onMeasButtonClick" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/meas_service_text" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/services_test_tips" />
+
+    <TextView
+        android:id="@+id/started_services"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/started_services" />
+
+    <TextView
+        android:id="@+id/test_end_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="" />
 
 </LinearLayout>

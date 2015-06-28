@@ -2,6 +2,9 @@ package abs.com.test.appmodule.classes;
 
 import java.util.*;
 
+/**
+ * Simple maths class containing some static functions to perform basic maths on lists of doubles
+ */
 public class Mathematics
 {
     /**

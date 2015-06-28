@@ -19,6 +19,9 @@
         <service
             android:name="abs.com.test.appmodule.services.TestService"
             android:exported="false"/>
+        <service
+            android:name="abs.com.test.appmodule.services.ConsumerService"
+            android:exported="false"/>
 
         <activity
             android:name="abs.com.test.appmodule.MainActivity"

@@ -19,6 +19,11 @@ import java.util.Map;
 
 import abs.com.test.appmodule.classes.Mathematics;
 
+/**
+ * Main class for the Tests' Service. It contains all the functions to perform all the tests.
+ * Selecting a test is easy and it is done via a test ID and a switch-case on the runTest()
+ * function.
+ */
 public class TestService extends PayloadApp
 {
     public static final String TAG = "TestService";
@@ -102,14 +107,6 @@ public class TestService extends PayloadApp
 
                 break;
 
-            case "latency-data":
-                int cycles = 10;
-                result = latencyDataTest(cycles);
-
-                writeLog(id, "Latency with " + (cycles)*8 + " bytes of data: " + result);
-
-                break;
-
             case "events":
                 Toast.makeText(this, "Starting event collision test...",
                         Toast.LENGTH_SHORT).show();
@@ -122,7 +119,7 @@ public class TestService extends PayloadApp
                 Toast.makeText(this, "Starting multiple services test...",
                         Toast.LENGTH_SHORT).show();
 
-                servicesTest(10);
+                getLatencies(4, 1, 500);
 
                 break;
 
@@ -138,113 +135,86 @@ public class TestService extends PayloadApp
     /**
      * Performs the latencies test for various intervals and getting the latencies and error count
      * for each interval
-     * @param pin int
-     * @param times int
-     * @return Map(Integer, Integer)
+     * @param pin The pin to which it writes
+     * @param times The number of times the latency is measured
+     * @return A Map containing how many errors have occurred in each interval
      */
     private Map<Integer, Integer> latencyErrorsTest(int pin, int times)
     {
         Map<Integer, Integer> errors = new HashMap<>();
-        List<Double> latencies = new ArrayList<>();
 
-        double start;
-        int x, y, errorCount;
+        int x, errorCount;
         for(x=0; x<=4; x++) {
             /* Update interval making it sweep from 0 to 200ms in 50ms jumps */
             int interval = 50*x;
-            /* Clean error count variable for the new test with the new latency */
-            errorCount = 0;
-            /* Clear the current latencies list */
-            latencies.clear();
 
-            for(y=0; y<times; y++) {
-                /* Get the start time */
-                start = System.nanoTime();
-
-                try {
-                    if(y%2 == 0) {
-                        if(this.arduino.digitalWrite(pin, 1) == 0) {
-                            /* Add the measured latency to the latencies list */
-                            Double latency = this.getLatency(start);
-                            latencies.add(latency);
-                        }
-                        else {
-                            errorCount++;
-                            Log.d(TAG, "Error!!");
-                        }
-                    } else {
-                        if(this.arduino.digitalWrite(pin, 0) == 0) {
-                            /* Add the measured latency to the latencies list */
-                            Double latency = this.getLatency(start);
-                            latencies.add(latency);
-                        }
-                        else {
-                            errorCount++;
-                            Log.d(TAG, "Error!!");
-                        }
-                    }
-                } catch(Exception e) {
-                    e.printStackTrace();
-                }
-
-                /* Wait the specified interval between digitalWrites */
-                try {
-                    Thread.sleep(interval);
-                } catch(InterruptedException e) {
-                    e.printStackTrace();
-                }
-            }
+            errorCount = getLatencies(pin, interval, times);
 
             /* Update the errors map with the actual test info */
             errors.put(interval, errorCount);
-
-            writeResults("latency-" + interval, latencies);
         }
 
         return errors;
     }
 
     /**
-     * Calculates the latency of getting different amounts of data through the SDB
-     * @param cycles int: Number of cycles to wait before dumping the buffer
-     * @return List<Long> with only one element which is the latency
+     * Gets the acual latencies
+     * @param pin The pin to which it writes
+     * @param interval The interval between samples
+     * @param times The times the latency is measured
+     * @return The number of errors that have occurred
      */
-    private List<Double> latencyDataTest(int cycles)
+    private int getLatencies(int pin, int interval, int times)
     {
-        Toast.makeText(this, "Starting latency with variable data test...",
-                Toast.LENGTH_SHORT).show();
+        List<Double> latencies = new ArrayList<>();
 
-        double start;
-        List<Double> latency = new ArrayList<>();
+        /* Clean error count variable for the new test with the new latency */
+        int y, errorCount = 0;
 
-        /* Start an event that reads from analog pin with the base frequency */
-        EventHandler event = arduino.createEvent(1, Event.ACTIONS.ANALOG_READ, new byte[]{4, 0});
+        for(y=0; y<times; y++) {
+            /* Get the start time */
+            double start = System.nanoTime();
 
-        /* Wait X cycles */
-        try {
-            wait(5000*cycles);
-        } catch(InterruptedException e) {
-            e.printStackTrace();
+            try {
+                if(y%2 == 0) {
+                    if(this.arduino.digitalWrite(pin, 1) == 0) {
+                        /* Add the measured latency to the latencies list */
+                        Double latency = this.getLatency(start);
+                        latencies.add(latency);
+                    }
+                    else {
+                        errorCount++;
+                        Log.d(TAG, "Error!!");
+                    }
+                } else {
+                    if(this.arduino.digitalWrite(pin, 0) == 0) {
+                        /* Add the measured latency to the latencies list */
+                        Double latency = this.getLatency(start);
+                        latencies.add(latency);
+                    }
+                    else {
+                        errorCount++;
+                        Log.d(TAG, "Error!!");
+                    }
+                }
+            } catch(Exception e) {
+                e.printStackTrace();
+            }
+
+            /* Wait the specified interval between digitalWrites */
+            waitMs(interval);
         }
-        /* Get the event data back */
-        start = System.nanoTime();
 
-        /* Dump the buffer data */
-        ArrayList<Byte> data = this.dumpBuffer(event);
+        writeResults("latency-" + interval, latencies);
 
-        if(data.size() > 0) {
-            event.stopEvent();
-            latency.add(getLatency(start));
-        }
-
-        event.stopEvent();
-
-        return latency;
+        return errorCount;
     }
 
     /**
-     * Event collision test
-     * @param id String
+     * Event collision test.
+     * It launches 2 events with the same frequency and waits 10000ms. Then it calls dumpBuffer
+     * at the same time for both events. Evaluates if there is a collision.
+     * @param id the test id
      */
     private void eventsTest(String id)
     {
@@ -255,22 +225,17 @@ public class TestService extends PayloadApp
         EventHandler ev2 = this.arduino.createEvent(2, Event.ACTIONS.ANALOG_READ, new byte[]{4, 0});
 
         /* Wait a certain time to allow the events to gather some data */
-        try {
-            wait(10000);
-        } catch(InterruptedException e) {
-            e.printStackTrace();
-        }
-
-        /* Make the dumpBuffer on separate threads would provoke any conflict? Do they
-        need to be synchronized? */
+        waitMs(20000);
 
         /* Dump the event1 buffer data */
+        Log.d(TAG, "Dumping buffer 1...");
         ArrayList<Byte> data1 = this.dumpBuffer(ev1);
 
         if(data1.size() > 0) {
             ev1.stopEvent();
         }
 
+        Log.d(TAG, "Dumping buffer 2...");
         /* Dump the event2 buffer data */
         ArrayList<Byte> data2 = this.dumpBuffer(ev2);
 
@@ -284,17 +249,20 @@ public class TestService extends PayloadApp
     /**
      * Starts the number of services that we specify
      * @param maxServ Number of services started
-     * TODO
      */
     private void servicesTest(int maxServ)
     {
         for(int c=0; c<maxServ; c++)
         {
-            startService();
+            this.launchService();
+            waitMs(20);
         }
     }
 
-    private void startService()
+    /**
+     * Launches a new service
+     */
+    private void launchService()
     {
         Intent service = new Intent(this, TestService.class);
         startService(service);
@@ -315,6 +283,20 @@ public class TestService extends PayloadApp
     }
 
     /**
+     * Waits the specified amount of ms
+     * @param ms number of ms
+     */
+    protected void waitMs(int ms)
+    {
+        Log.d(TAG, "Waiting " + ms + "ms");
+        try {
+            Thread.sleep(ms);
+        } catch(InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
      * Writes and stores the test log file in the phone storage in the "/test-logs" directory
      * The file name is "testID-test-log.txt"
      * @param testID String
@@ -322,6 +304,7 @@ public class TestService extends PayloadApp
      */
     private void writeLog(String testID, String data)
     {
+        Log.d(TAG, "Writing log for test: " + testID + "...");
         try {
             File sdCard = Environment.getExternalStorageDirectory();
             File dir = new File (sdCard.getAbsolutePath() + "/test-logs");
@@ -371,8 +354,11 @@ public class TestService extends PayloadApp
         byte result;
         ArrayList<Byte> data = new ArrayList<>();
         do {
+            Log.d(TAG, "Reading byte...");
             result = event.dumpBuffer();
+            Log.d(TAG, "Read byte!");
             data.add(result);
+            waitMs(500);
         } while(result != '\0');
 
         return data;

@@ -50,11 +50,7 @@ public class MainActivity extends Activity
     {
         int id = item.getItemId();
 
-        if (id == R.id.action_settings) {
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
+        return (id == R.id.action_settings) || super.onOptionsItemSelected(item);
     }
 
     @Override
@@ -73,10 +69,8 @@ public class MainActivity extends Activity
         List<Item> items = new ArrayList<>();
 
         items.add(new Item("latency", "Latency"));
-        items.add(new Item("latencydata", "Latency with variable data"));
         items.add(new Item("events", "Event collision"));
         items.add(new Item("services", "Multiple services"));
-        items.add(new Item("app-msg", "Inter-app messages"));
 
         return items;
     }

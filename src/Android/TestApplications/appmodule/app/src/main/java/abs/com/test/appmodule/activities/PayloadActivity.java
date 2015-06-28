@@ -99,6 +99,8 @@ public class PayloadActivity  extends Activity
             unbindService(mConnection);
             mBound = false;
         }
+
+        stopService(new Intent(this, TestService.class));
     }
 
     /**
