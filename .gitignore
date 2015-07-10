@@ -5,19 +5,21 @@ bin-release/
 
 # Other files and folders
 .settings/
+src/app_module/app/libs
 
 # Project files, i.e. `.project`, `.actionScriptProperties` and `.flexProperties`
 # should NOT be excluded as they contain compiler settings and other important
-# information for Eclipse / Flash Builder.
+# information for Eclipse.
 
 # Log files
 *.log
 *.old
 
-# Object files
+# Object/Compiled libraries files
 *.o
 *.d
 *.so
+*.jar
 
 # Binaries
 /src/Architecture/MCS/Test/mcs
@@ -26,4 +28,6 @@ bin-release/
 # Auto generated files
 auto_*
 configure.mk
+
+
 
