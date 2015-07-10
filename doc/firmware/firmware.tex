@@ -1,0 +1,63 @@
+\documentclass[12pt,a4paper]{report}
+
+\usepackage[a4paper]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{parskip}
+\usepackage{graphicx}
+
+
+\definecolor{light-gray}{gray}{0.8}
+
+\lstset{backgroundcolor=\color{light-gray}, language=bash, basicstyle=\ttfamily\scriptsize, tabsize=2, showstringspaces=false}
+
+\begin{document}
+
+\section*{Arduino Firmware}
+
+\subsection*{Introduction}
+
+One of the main parts of the ABS project is the Arduino subsystem. This part is in charge of the communication between the phone and the different payloads, where the Arduino platform acts as an interface Payloads-Phone.
+
+The idea is to be able to control the Arduino (and therefore the attached Payloads) directly from the phone without writing code from the Arduino. Instead, a very generic firmware interprets and executes the commands sent by the phone.
+
+In the next few lines I will like to explain how the firmware works and the protocol we came up with to communicate the phone and the Arduino via USB.
+
+\subsection*{Protocol}
+
+The protocol aims to be as generic as possible, allowing creating any type of command. With the same packet structure one can start an i2c communication, read the value from a digital pin or even create an event to read a pin every 2 seconds.
+
+The basic structure for the USB packets is shown below:
+
+
+\includegraphics[scale=0.5]{packet_basic}
+
+-	CMD (3 bits): Defines the basic type of command to be performed.
+
+-	Parameters (4 bits): Defines the specific command to be performed.
+
+-	CMD Args (14 bits): Arguments that the command takes (arg0, arg1).
+
+-	Data Size (14 bits): Size in bytes of the field Data.
+
+-	Data (depends on the data size): Data that the command takes.
+
+-	Packet ID (7 bits): Packet identifier.
+
+-	End: Indicates the end of a packet. 1 in the last packet and 0 in the rest.
+
+
+\subsection*{Firmware}
+
+The Arduino firmware waits for commands on the USB port. After receiving a command, the firmware executes it. This operation is done over and over again and constitutes the main loop of the Arduino firmware.
+
+In addition we have what we called events. Events are actions that are executed at very specifically timed intervals. These actions are managed independently from the main loop and are controlled by a timer interrupt.
+
+Since the execution of an event inside an interrupt routine could be susceptible of nested interrupts, these actions are performed within the main loop and the event routine only decides when they should be executed.
+
+When the event routine determines that the time that that has elapsed since the last execution of an event is bigger or equal than the specified repetition time sets a flag to 1. Then, the main loop knows that needs to execute the event.
+
+A key function here is the process command function. This interprets the packets and executes them. Note that this function is the same for commands and events. The only difference is that in the first case, the commands to execute are encode in the USB packet and in the events, the commands (actions) are stored in a struct, which every event has, as a byte array. This struct also contains the interval of repetition and the id of a buffer on the SD for that event.
+
+\end{document}

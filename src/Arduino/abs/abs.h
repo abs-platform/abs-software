@@ -1,0 +1,81 @@
+#ifndef __ABS_H
+#define __ABS_H
+
+#include "Arduino.h"
+
+#define IS_PIN_DIGITAL(p)       ((p) >= 0 && (p) <= 40)
+#define IS_PIN_ANALOG(p)        ((p) >= 0 && (p) <= 15)
+#define IS_PIN_PWM(p)           digitalPinHasPWM(p)
+
+#define MAX_SERVO 2
+#define MAX_SERIAL 2
+#define MAX_EVENTS 10
+#define MAX_PACKET_SIZE 500
+#define SD_CS 3
+#define TIMER_INTERVAL 500000
+#define SERIAL_BITRATE 115200
+const int bitrate[] = {300, 1200, 2400, 4800, 9600, 14400, 19200, 28800, 38400, 57600,  115200};
+
+typedef struct {
+     int command;
+     int parameters;
+     int cmd_arg1;
+     int cmd_arg2;
+     int data_size;
+     char *data;
+     uint8_t *pkg;
+     int packet_id;
+ } USBPacket;
+
+typedef struct {
+    int bufferid;
+    int interval;
+    int execute;
+    USBPacket action;
+} Event;
+
+typedef enum {
+    CONTROL,
+    BASIC_IO,
+    COMMS,
+    EVENT,
+    SERVO
+} Command;
+
+typedef enum {
+    ANALOG_WRITE,
+    DIGITAL_WRITE,
+    ANALOG_READ,
+    DIGITAL_READ,
+    TOOGLE_PIN
+} ParametersBasicIO;
+
+typedef enum {
+    INIT_UART,
+    READ_UART,
+    WRITE_UART,
+    INIT_SPI,
+    READ_SPI,
+    WRITE_SPI,
+    INIT_CAN,
+    READ_CAN,
+    WRITE_CAN
+} ParametersComms;
+
+typedef enum {
+    CONF,    
+    DUMP
+} ParametersEvents;
+
+typedef enum {
+    START,
+    SET_DC,    
+    STOP  
+} ParametersServo;
+
+typedef enum {
+  
+  
+} Errors;
+
+#endif
