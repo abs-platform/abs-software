@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 #include "cJSON.h"
 #include "mcsg.h"
 #include "../include/mcs.h"
@@ -37,29 +38,27 @@ void mcsg_message_translator(cJSON *json, FILE *out)
     fprintf(out, "        .response_size = %d,\n", subitem->valueint);
     fprintf(out, "    },\n    .destination = \"%s\",\n", json->valuestring);
     json = json->next;
+    fprintf(out, "    .origin_groups = {");
     if(json->child) {
         subitem = json->child;
-        fprintf(out, "    .origin_groups = {%s", subitem->valuestring);
+        fprintf(out, "%s", subitem->valuestring);
         while(subitem->next) {
             subitem = subitem->next;
             fprintf(out, ", %s", subitem->valuestring);
         }
-        fprintf(out, "},\n");
-    } else {
-        fprintf(out, "    .origin_groups = NULL,\n");
     }
+    fprintf(out, "},\n");
     json = json->next;
+    fprintf(out, "    .destination_groups = {");
     if(json->child) {
         subitem = json->child;
-        fprintf(out, "    .destination_groups = {%s", subitem->valuestring);
+        fprintf(out, "%s", subitem->valuestring);
         while(subitem->next) {
             subitem = subitem->next;
             fprintf(out, ", %s", subitem->valuestring);
         }
-        fprintf(out, "},\n");
-    } else {
-        fprintf(out, "    .destination_groups = NULL,\n");
     }
+    fprintf(out, "},\n");
     fprintf(out, "    },\n");
 }
 
@@ -134,80 +133,54 @@ void mcsg_payload_translator(cJSON *json, FILE *out)
     if(json->valueint) fprintf(out, "        .raw_data = true,\n");
     else fprintf(out, "        .raw_data = false,\n");
     /*Go to configuration field*/
-    subitem = json->next->next->child;
+    json = json->next->next->child;
     /*Go to response_size field*/
+    subitem = json;
     for(i = 0; i < MCSG_STATE_RESPONSE_SIZE_FIELD; i++) subitem = subitem->next;
     fprintf(out, "        .response_size = %d,\n", subitem->valueint);
     fprintf(out, "    },\n");
-    json = json->next->next->child;
+    fprintf(out, "    .command = %d,\n", json->valueint);
     json = json->next;
-    fprintf(out, "    .command = \"%s\",\n", json->valuestring);
-    json = json->next;
-    fprintf(out, "    .parameters = \"%s\",\n", json->valuestring);
+    fprintf(out, "    .parameters = %d,\n", json->valueint);
     json = json->next;
     fprintf(out, "    .arguments = \"%s\",\n", json->valuestring);
     json = json->next;
-    if(!(json->valueint)) fprintf(out, "    .data = NULL,\n");
+    if(!(json->valueint)) fprintf(out, "    .data = NULL,\n"); /*How is this field when not null?*/
     else fprintf(out, "    .data = \"%s\",\n", json->valuestring);
     fprintf(out, "    },\n");
 }
 
 MCSGCommandList *mcsg_commands_reader(cJSON *json)
 {
-    int type_id;
-    bool first_message = true, first_state = true, first_payload = true;
-    MCSGCommand *message_list = malloc(sizeof (struct MCSGCommand)), *temp_message,
-                *state_list = malloc(sizeof (struct MCSGCommand)), *temp_state,
-                *payload_list = malloc(sizeof (struct MCSGCommand)), *temp_payload;
-    MCSGCommandList *command_list = malloc(sizeof (struct MCSGCommandList));
-
-    type_id = mcsg_type_identifier(json);
-
-    switch (type_id) {
-        case MCS_TYPE_MESSAGE:
-            temp_message = malloc(sizeof (struct MCSGCommand));
-            if(temp_message == NULL) printf("ERROR: Could not allocate memory.\n");
-            temp_message->cmd = json;
-            temp_message->next = message_list;
-            message_list = temp_message;
-            if(first_message) {
-                message_list->next = NULL;
-                first_message = false;
-            }
-            break;
-        case MCS_TYPE_STATE:
-            temp_state = malloc(sizeof (struct MCSGCommand));
-            if(temp_state == NULL) printf("ERROR: Could not allocate memory.\n");
-            temp_state->cmd = json;
-            temp_state->next = state_list;
-            state_list = temp_state;
-            if(first_state) {
-                state_list->next = NULL;
-                first_state = false;
-            }
-            break;
-        case MCS_TYPE_PAYLOAD:
-            temp_payload = malloc(sizeof (struct MCSGCommand));
-            if(temp_payload == NULL) printf("ERROR: Could not allocate memory.\n");
-            temp_payload->cmd = json;
-            temp_payload->next = payload_list;
-            payload_list = temp_payload;
-            if(first_payload) {
-                payload_list->next = NULL;
-                first_payload = false;
-            }
-            break;
-        default:
-            printf("ERROR: Command could not be identified.\n");
-            break;
-    }
+    int type_id, i, command_count;
+    char *command_name, *prefix;
+    bool first_message = true, first_state = true, first_payload = true, first_enum = true;
+    MCSGCommand *message_list, *temp_message;
+    MCSGCommand *state_list, *temp_state;
+    MCSGCommand *payload_list, *temp_payload;
+    MCSGCommandList *command_list = malloc(sizeof(struct MCSGCommandList));
+    if(command_list == NULL) printf("ERROR: Could not allocate memory.\n");
+    MCSGEnumList *enum_list, *temp_enum;
     
-    while(json->next) {
-        json = json->next;
+    message_list = malloc(sizeof(struct MCSGCommand));
+    if(message_list == NULL) printf("ERROR: Could not allocate memory.\n");
+    state_list = malloc(sizeof(struct MCSGCommand));
+    if(state_list == NULL) printf("ERROR: Could not allocate memory.\n");
+    payload_list = malloc(sizeof(struct MCSGCommand));
+    if(payload_list == NULL) printf("ERROR: Could not allocate memory.\n");
+    enum_list = malloc(sizeof(struct MCSGEnumList));
+    if(enum_list == NULL) printf("ERROR: Could not allocate memory.\n");
+    
+    json = json->child->child;
+    command_count = 0;
+    
+    do {
         type_id = mcsg_type_identifier(json);
+
         switch (type_id) {
             case MCS_TYPE_MESSAGE:
-                temp_message = malloc(sizeof (struct MCSGCommand));
+                /*Save to buffer*/
+                temp_message = malloc(sizeof(struct MCSGCommand));
                 if(temp_message == NULL) printf("ERROR: Could not allocate memory.\n");
                 temp_message->cmd = json;
                 temp_message->next = message_list;
@@ -216,9 +189,29 @@ MCSGCommandList *mcsg_commands_reader(cJSON *json)
                     message_list->next = NULL;
                     first_message = false;
                 }
+                
+                /*Index to enum list*/
+                prefix = "MCS_MESSAGE_";
+                temp_enum = malloc(sizeof(struct MCSGEnumList));
+                command_name = malloc(sizeof(json->child->valuestring));
+                for(i = 0; json->child->valuestring[i]; i++) {
+                    command_name[i] = toupper(json->child->valuestring[i]);
+                }
+                temp_enum->name = malloc(strlen(command_name)+strlen(prefix));
+                strcpy(temp_enum->name, prefix);
+                strcat(temp_enum->name, command_name);
+                temp_enum->value = MCSG_TYPE_MESSAGE_DEC + command_count;
+                command_count++;
+                temp_enum->next = enum_list;
+                enum_list = temp_enum;
+                if(first_enum) {
+                    enum_list->next = NULL;
+                    first_enum = false;
+                }
                 break;
             case MCS_TYPE_STATE:
-                temp_state = malloc(sizeof (struct MCSGCommand));
+                /*Save to buffer*/
+                temp_state = malloc(sizeof(struct MCSGCommand));
                 if(temp_state == NULL) printf("ERROR: Could not allocate memory.\n");
                 temp_state->cmd = json;
                 temp_state->next = state_list;
@@ -227,9 +220,29 @@ MCSGCommandList *mcsg_commands_reader(cJSON *json)
                     state_list->next = NULL;
                     first_state = false;
                 }
+                
+                /*Index to enum list*/
+                prefix = "MCS_STATE_";
+                temp_enum = malloc(sizeof(struct MCSGEnumList));
+                command_name = malloc(sizeof(json->child->valuestring));
+                for(i = 0; json->child->valuestring[i]; i++) {
+                    command_name[i] = toupper(json->child->valuestring[i]);
+                }
+                temp_enum->name = malloc(strlen(command_name)+strlen(prefix)+1);
+                strcpy(temp_enum->name, prefix);
+                strcat(temp_enum->name, command_name);
+                temp_enum->value = MCSG_TYPE_STATE_DEC + command_count;
+                command_count++;
+                temp_enum->next = enum_list;
+                enum_list = temp_enum;
+                if (first_enum) {
+                    enum_list->next = NULL;
+                    first_enum = false;
+                }
                 break;
             case MCS_TYPE_PAYLOAD:
-                temp_payload = malloc(sizeof (struct MCSGCommand));
+                /*Save to buffer*/
+                temp_payload = malloc(sizeof(struct MCSGCommand));
                 if(temp_payload == NULL) printf("ERROR: Could not allocate memory.\n");
                 temp_payload->cmd = json;
                 temp_payload->next = payload_list;
@@ -238,30 +251,51 @@ MCSGCommandList *mcsg_commands_reader(cJSON *json)
                     payload_list->next = NULL;
                     first_payload = false;
                 }
+                
+                /*Index to enum list*/
+                prefix = "MCS_SPAYLOAD_";
+                temp_enum = malloc(sizeof(struct MCSGEnumList));
+                command_name = malloc(sizeof(json->child->valuestring));
+                for(i = 0; json->child->valuestring[i]; i++) {
+                    command_name[i] = toupper(json->child->valuestring[i]);
+                }
+                temp_enum->name = malloc(strlen(command_name)+strlen(prefix)+1);
+                strcpy(temp_enum->name, prefix);
+                strcat(temp_enum->name, command_name);
+                temp_enum->value = MCSG_TYPE_PAYLOAD_DEC + command_count;
+                command_count++;
+                temp_enum->next = enum_list;
+                enum_list = temp_enum;
+                if(first_enum) {
+                    enum_list->next = NULL;
+                    first_enum = false;
+                }
                 break;
             default:
                 printf("ERROR: Command could not be identified.\n");
                 break;
         }
-    }
+        json = json->next;
+    } while(json);
     
     command_list->messages = message_list;
     command_list->states = state_list;
     command_list->payloads = payload_list;
+    command_list->enums = enum_list;
     
     return command_list;
 }
 
-void mcsg_commands_translator(MCSGCommandList *command_list) 
+void mcsg_commands_translator(MCSGCommandList *command_list, FILE *out) 
 {
-    int command_list_size, command_count = 0, type_value;
-    FILE *out;
-    MCSGCommand *message_list, *state_list, *payload_list, *temp;
+    int command_list_size;
+    MCSGCommand *message_list, *state_list, *payload_list;
+    MCSGEnumList *enum_list;
     
     message_list = command_list->messages;
     state_list = command_list->states;
     payload_list = command_list->payloads;
-    out = fopen("mcsg_printed.c", "w");
+    enum_list = command_list->enums;
     
     /*Print all the general header lines*/
     fprintf(out, "/* AUTOGENERATED. DO NOT MODIFY */\n\n"
@@ -273,39 +307,15 @@ void mcsg_commands_translator(MCSGCommandList *command_list)
     /*Print the enum list*/
     fprintf(out, "typedef enum MCSCommand {\n");
     
-    temp = message_list;
-    type_value = MCSG_TYPE_MESSAGE_DEC;
-    mcsg_enum_translator(temp->cmd, out, command_count, type_value);
-    while(temp->next != NULL){
-        command_count++;
-        temp = temp->next;
-        mcsg_enum_translator(temp->cmd, out, command_count, type_value);
-    }
-    
-    temp = state_list;
-    type_value = MCSG_TYPE_STATE_DEC;
-    command_count++;
-    mcsg_enum_translator(temp->cmd, out, command_count, type_value);
-    while(temp->next != NULL){
-        command_count++;
-        temp = temp->next;
-        mcsg_enum_translator(temp->cmd, out, command_count, type_value);
-    }
-    
-    temp = payload_list;
-    type_value = MCSG_TYPE_PAYLOAD_DEC;
-    command_count++;
-    mcsg_enum_translator(temp->cmd, out, command_count, type_value);
-    while(temp->next != NULL){
-        command_count++;
-        temp = temp->next;
-        mcsg_enum_translator(temp->cmd, out, command_count, type_value);
-    }
+    do {
+        mcsg_enum_translator(enum_list, out);
+        enum_list = enum_list->next;
+    } while(enum_list);
     
     fprintf(out, "} MCSCommand;\n\n");
     
     /*Print the message header, message(s), and footer*/
-    fprintf(out, "const static struct MCSCommandOptionsMessage mcs_command_message_list[] =\n{\n");
+    fprintf(out, "static const struct MCSCommandOptionsMessage mcs_command_message_list[] =\n{\n");
     
     mcsg_message_translator(message_list->cmd, out);
     command_list_size = 1;
@@ -318,7 +328,7 @@ void mcsg_commands_translator(MCSGCommandList *command_list)
     fprintf(out, "};\n\n#define mcs_command_message_list_size %d\n\n", command_list_size);
     
     /*Print the state header, state(s), and footer*/
-    fprintf(out, "const static struct MCSCommandOptionsState mcs_command_state_list[] =\n{\n");
+    fprintf(out, "static const struct MCSCommandOptionsState mcs_command_state_list[] =\n{\n");
     
     mcsg_state_translator(state_list->cmd, out);
     command_list_size = 1;
@@ -331,7 +341,7 @@ void mcsg_commands_translator(MCSGCommandList *command_list)
     fprintf(out, "};\n\n#define mcs_command_state_list_size %d\n\n", command_list_size);
     
     /*Print the payload header, payload(s), an footer*/
-    fprintf(out, "const static struct MCSCommandOptionsPayload mcs_command_payload_list[] =\n{\n");
+    fprintf(out, "static const struct MCSCommandOptionsPayload mcs_command_payload_list[] =\n{\n");
     
     mcsg_payload_translator(payload_list->cmd, out);
     command_list_size = 1;
@@ -342,37 +352,45 @@ void mcsg_commands_translator(MCSGCommandList *command_list)
     }
     
     fprintf(out, "};\n\n#define mcs_command_payload_list_size %d\n\n#endif", command_list_size);
-    
-    fclose(out);
 }
 
-void mcsg_enum_translator(cJSON *json, FILE *out, int command_count, int type_value)
+void mcsg_enum_translator(MCSGEnumList *enum_list, FILE *out)
 {
-    int i = 0, value;
-    json = json->child;
+    fprintf(out, "    %s = %d,\n", enum_list->name, enum_list->value);
+}
+
+void mcsg_java_translator(MCSGEnumList *enum_list, FILE *out)
+{
+    int i, understroke;
+    /*Print the java headers*/
+    fprintf(out, "public class SDBPacket {\n\n    public enum CMD {\n\n");
     
-    switch(type_value){
-        case MCSG_TYPE_MESSAGE_DEC:
-            fprintf(out, "    MCS_MESSAGE_");
-            break;
-        case MCSG_TYPE_STATE_DEC:
-            fprintf(out, "    MCS_STATE_");
-            break;
-        case MCSG_TYPE_PAYLOAD_DEC:
-            fprintf(out, "    MCS_PAYLOAD_");
-            break;
-    }
+    /*Print the enum list*/
+    do {
+        /*Cut out the prefix from the names*/
+        understroke = 0;
+        fprintf(out, "        ");
+        for(i = 0; i < strlen(enum_list->name); i++){
+            if (understroke >= 2) fprintf(out, "%c", enum_list->name[i]);
+            if (enum_list->name[i] == '_') understroke++;
+        }
+        fprintf(out, " (%d)", enum_list->value);
+        enum_list = enum_list->next;
+        if (enum_list) fprintf(out, ",\n");
+        else fprintf(out, ";\n");
+    } while (enum_list);
     
-    while(json->valuestring[i]) {
-        fprintf(out, "%c", toupper(json->valuestring[i]));
-        i++;
-    }
-    value = type_value + command_count;
-    fprintf(out, " = %d,\n", value);    
+    fprintf(out, "\n        private int cmd;\n\n        private CMD (int cmd)\n"
+                "        {\n            this.cmd = cmd;\n        }\n\n"
+                "        public int getCmd ()\n        {\n            return cmd;\n"
+                "        }\n    }\n\n    private CMD cmd;\n    private byte [] args;\n"
+                "    private byte [] data;\n\n    public SDBPacket (CMD cmd, byte [] "
+                "args, byte [] data)\n    {\n        //...\n    }\n\n}");
+    
 }
 
 void main() {
-    FILE *f; 
+    FILE *f, *out; 
     long len; 
     char *data; 
     cJSON *json;
@@ -392,14 +410,20 @@ void main() {
     if(!json) {
         printf("Error before: [%s]\n", cJSON_GetErrorPtr());
     } else {
-        /*Go to the first json element*/
-        json = json->child->child;
-        
         /*Place individual commands in their respective buffers*/
         commandlist = mcsg_commands_reader(json);
         
         /*Tanslate and print to 'printed.c'*/
-        mcsg_commands_translator(commandlist);
+        out = fopen("mcsg_printed.c", "w");
+        mcsg_commands_translator(commandlist, out);
+        fclose(out);
+        
+        /*Translate to java*/
+        out = fopen("mcsg_java_printed.java", "w");
+        mcsg_java_translator(commandlist->enums, out);
+        fclose(out);
+        
+        
     }
     
     cJSON_Delete(json);
