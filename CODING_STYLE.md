@@ -103,16 +103,16 @@ less than 80 characters.
    4. braces are separated one space from the rest of the line (if any).
       Example:
         
-        if(a == 5) {                /* One space before "{".                */
-            printf("a was 5.\n");   /* Identation is applied.               */
-        } else if(a == 6) {         /* Padding spaces next to braces.       */
-            printf("a was 6.\n");
-        } else {                    /* All in one new line.                 */
-            printf("a was something else entirely.\n");
-        }
-        for(i = 0; i < 3; i++) {    /* Braces are optional here because the */
-            printf("i is %d\n", i); /* inner part of the block is short     */
-        }                           /* enough to write it on a single line. */
+            if(a == 5) {                /* One space before "{".                */
+                printf("a was 5.\n");   /* Identation is applied.               */
+            } else if(a == 6) {         /* Padding spaces next to braces.       */
+                printf("a was 6.\n");
+            } else {                    /* All in one new line.                 */
+                printf("a was something else entirely.\n");
+            }
+            for(i = 0; i < 3; i++) {    /* Braces are optional here because the */
+                printf("i is %d\n", i); /* inner part of the block is short     */
+            }                           /* enough to write it on a single line. */
         
  6. Functions, classes and methods:
    1. Both opening and closing braces must be written in a new line.
@@ -120,12 +120,12 @@ less than 80 characters.
       closing braces, respectively.
       Example:
 
-        int a_function(void)
-        {                   /* New line.                                    */
-            do_something(); /* No space between prev. line and this one.    */
-                            /* Blank lines here ARE allowed.                */
-            return 0;       /* No space after the return line.              */
-        }                   /* New line.                                    */
+            int a_function(void)
+            {                   /* New line.                                    */
+                do_something(); /* No space between prev. line and this one.    */
+                                /* Blank lines here ARE allowed.                */
+                return 0;       /* No space after the return line.              */
+            }                   /* New line.                                    */
 
  7. Switch control blocks must be indented setting the "case ...:" and 
     "default:" keywords at a different level than the body of the condition. 
