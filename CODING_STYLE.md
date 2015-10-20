@@ -95,14 +95,14 @@ less than 80 characters.
             }
         }
         
- 5. For flow control statements (if, while, for, switch):
+ 5. For flow control statements (`if`, `while`, `for`, `switch`):
    1. The opening brace must be in the same line that contains the flow 
       control statement and must be preceeded by a space; 
    2. the closing brace is in a new line; 
-   3. the "} else ... {" statement is in a single new line;
+   3. the `} else ... {` statement is in a single new line;
    4. braces are separated one space from the rest of the line (if any).
-   
-        Example:
+      Example:
+        
         if(a == 5) {                /* One space before "{".                */
             printf("a was 5.\n");   /* Identation is applied.               */
         } else if(a == 6) {         /* Padding spaces next to braces.       */
@@ -157,13 +157,13 @@ less than 80 characters.
     is discouraged in general, though not forbidden. However, their usage is
     indeed restricted to local scopes (i.e. global variables/functions must 
     never be named using those common words)
- 3. Variables are lower_case_with_underscores; easy to type and read (for all 
+ 3. Variables are `lower_case_with_underscores`; easy to type and read (for all 
     languages: Java, C, Python...)
- 4. In C/C++ and similar languages: functions are lower_case_with_underscores.
- 5. In Java: methods and class names are in CamelCase.
- 6. Structured and enum type names are in CamelCase; harder to type but standing
+ 4. In C/C++ and similar languages: functions are `lower_case_with_underscores`.
+ 5. In Java: methods and class names are in `CamelCase`.
+ 6. Structured and enum type names are in `CamelCase`; harder to type but standing
     out.
- 7. Constants are UPPER_CASE_WITH_UNDERSCORES; to stand out.
+ 7. Constants are `UPPER_CASE_WITH_UNDERSCORES`; to stand out.
  8. Global symbols include the domain of which they are part:
  
         syscore_init_start
@@ -248,7 +248,7 @@ less than 80 characters.
     (except in the extension) and the header file should include all libraries
     and external headers. The source files should contain only one #include 
     directive (see 5.10 for more information).
- 2. Header files must contain ALL constants, macros, type definitions, and
+ 2. Header files must contain **all** constants, macros, type definitions, and
     global function prototypes and variables. The preferred header structure is
     as follows:
     
@@ -298,6 +298,7 @@ less than 80 characters.
         extern ... 
         
         #endif        
+        
  3. Header files must have a conditional compilation with a descriptive name 
     given its domain and file name, and finish with a `_H`:
     
@@ -328,7 +329,7 @@ less than 80 characters.
  1. Use in-code comments rationally. There's no need to comment each and every 
     line but it is very important to comment on decisions made, obscure hacks or 
     other parts which might be difficult to understand.
- 2. Always surround the comments with /* */. Do not use other methods like //.
+ 2. Always surround the comments with `/* */`. Do not use other methods like `//`.
  3. Comments are English sentences: although short and clear, they must be 
     grammatically correct. Do use punctuation (commas, full stops, parentheses 
     and hyphens) and a proper language (e.g. avoid slang words, use technical 
