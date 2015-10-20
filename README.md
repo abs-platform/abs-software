@@ -4,7 +4,7 @@ Android Beyond the Stratosphere
 This is the main *software* repository for the **Android Beyond the Stratosphere** project, 
 developed at Technical University of Catalonia - UPC BarcelonaTech.
 
-The project at glance
+The project at a glance
 ----------------------------------------------------------------------------------------------------
 ###Vision
 Space is currently restricted to governments and large corporations due to the large cost associated 
