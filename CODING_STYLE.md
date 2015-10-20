@@ -28,25 +28,33 @@ less than 80 characters.
  1. Indents are four spaces. Tabs are forbidden for identation purposes unless 
     they are a language or syntax request (e.g. Makefiles).
  2. Separate parameters in functions with one space:
+ 
         function(param1, param2, param3);
+ 
  3. Opeands and operators must be separated with (at least) one space at each 
     side of the operation:
+ 
         b = a + 1;
- 4. Extra spaces can be optionally added to improve readability only when  
+ 
+ 4. Extra spaces can be optionally added to improve readability only when
     several operations can be aligned together. In this situation, the alignment
     should be ideally done with the equal (=) symbol:
+ 
         b    = a + 1;
         c_2  = b * 4;
         c_2 *= a;
+ 
  5. Extra spaces are not allowed after '*' in C pointers. The 
     purpose of this rule is to clearly distinguish pointers from scalar 
     products. Example:
+ 
         int  *a;         /* Ok.    */
         int*  a;         /* Wrong. */ 
         int * a;         /* Wrong. */
         char *a, *b, *c; /* Ok    */
         b = *a;          /* Ok.    */
         b = * a;         /* Wrong. */
+ 
     Exception: function headers can have whitespace before and after the '*'.
  6. Do not leave whitespace dangling off the ends of lines.
  7. Leave one empty line between logical groups of instructions.
@@ -61,13 +69,17 @@ less than 80 characters.
     statement. 
  3. Flow control statements must not contain spaces between the name and 
     conditions/arguments.
+ 
         if(condition)   /* Correct. */
         if (condition)  /* Wrong.   */
  4. Blocks containing a single statement can skip the braces if and only if they 
     fit in a single line, e.g.: 
+ 
         if(condition) op = 42;
+ 
     The purpose of this rule is only to shrink the SLOC number and should 
     *never* worsen readability. Nesting is not allowed without braces:
+ 
         for(int i = 0; i < N; i++)          /*          */
             for(int j = 0; j < N; j++)      /* Wrong.   */
                 for(int k = 0; k < N; k++)  /*          */
@@ -82,12 +94,14 @@ less than 80 characters.
                 for(int i = 0; i < N; i++) single_line();   /* Correct. */
             }
         }
+        
  5. For flow control statements (if, while, for, switch):
-     a. The opening brace must be in the same line that contains the flow 
-        control statement and must be preceeded by a space; 
-     b. the closing brace is in a new line; 
-     c. the "} else ... {" statement is in a single new line;
-     d. braces are separated one space from the rest of the line (if any).
+   1. The opening brace must be in the same line that contains the flow 
+      control statement and must be preceeded by a space; 
+   2. the closing brace is in a new line; 
+   3. the "} else ... {" statement is in a single new line;
+   4. braces are separated one space from the rest of the line (if any).
+   
         Example:
         if(a == 5) {                /* One space before "{".                */
             printf("a was 5.\n");   /* Identation is applied.               */
@@ -99,11 +113,13 @@ less than 80 characters.
         for(i = 0; i < 3; i++) {    /* Braces are optional here because the */
             printf("i is %d\n", i); /* inner part of the block is short     */
         }                           /* enough to write it on a single line. */
+        
  6. Functions, classes and methods:
-    a. Both opening and closing braces must be written in a new line.
-    b. No blank lines can be included right after or before the opening and 
-       closing braces, respectively.
-       Example:
+   1. Both opening and closing braces must be written in a new line.
+   2. No blank lines can be included right after or before the opening and 
+      closing braces, respectively.
+      Example:
+
         int a_function(void)
         {                   /* New line.                                    */
             do_something(); /* No space between prev. line and this one.    */
@@ -114,6 +130,7 @@ less than 80 characters.
  7. Switch control blocks must be indented setting the "case ...:" and 
     "default:" keywords at a different level than the body of the condition. 
     Example:
+
         switch(var) {                           /* Same rules.              */
             case 1:                             /* 1 indent. step applied.  */
             case 2:
@@ -127,6 +144,7 @@ less than 80 characters.
                 printf("Var is not 1, 2, 3 or 4\n");
                 break;
         }
+
  8. Java/C++ classes must be defined in single files (i.e. defining more than 
     one class in a file is forbidden).
 
@@ -136,7 +154,7 @@ less than 80 characters.
  1. Names have to be lexically sufficient and must never induce to a wrong 
     understanding of the value/functionality. 
  2. The use of common words such as "aux", "error", "device", "my_function"... 
-    is discouraged in general, though not forbidden. However, their usage is  
+    is discouraged in general, though not forbidden. However, their usage is
     indeed restricted to local scopes (i.e. global variables/functions must 
     never be named using those common words)
  3. Variables are lower_case_with_underscores; easy to type and read (for all 
@@ -147,21 +165,25 @@ less than 80 characters.
     out.
  7. Constants are UPPER_CASE_WITH_UNDERSCORES; to stand out.
  8. Global symbols include the domain of which they are part:
+ 
         syscore_init_start
         syscore_init_clean
         syscore_power_flag
+ 
  9. When wrapping standard library functions, use the prefix abs_ to alert
     readers that they are seeing a wrapped version; otherwise avoid this prefix:
+ 
         abs_malloc
-10. Files have to be named using the following structure:
-        <codename>[_<extra>].<ext>
+
+ 10. Files have to be named using the following structure: `<codename>[_<extra>].<ext>`
     Where:
-     <codename> is the project's abbreviation for the program name (e.g. "eps").
-        <extra> is an optional sub-name for the file (e.g. "driver").
-          <ext> is the file extension.
-    For C/C++ programs, two files are always compulsory: <codename>.c and 
-    <codename>.h. Additional files in that case would be, e.g.: <codename>.conf,
-    <codename>_<extra1>.c, <codename>_<extra2>.c, and so on. 
+   1. `<codename>` is the project's abbreviation for the program name (e.g. "eps").
+   2. `<extra>` is an optional sub-name for the file (e.g. "driver").
+   3. `<ext>` is the file extension.
+   
+    For C/C++ programs, two files are always compulsory: `<codename>.c` and 
+    `<codename>.h`. Additional files in that case would be, e.g.: `<codename>.conf`,
+    `<codename>_<extra1>.c`, `<codename>_<extra2>.c`, and so on. 
     Although OO programs are excluded from this rule, the must always include,
     at least, one source file (.java or .cpp) which name matches the codename of
     the program. 
@@ -180,6 +202,7 @@ less than 80 characters.
  3. In C, new types must always be defined in the *global* namespace. Moreover, 
     for coherency and uniformity, structs must be written using the name at the 
     beginning AND at the end. Example:
+    
         typedef struct S { int x; } S;  /* Correct. Preferrable option.       */
         typedef struct S { int x; };    /* Wrong.                             */
         typedef struct { int x; } S;    /* Wrong.                             */
@@ -191,7 +214,6 @@ less than 80 characters.
          
         
 
-
 7. Static and Extern
 --------------------------------------------------------------------------------
  1. All data global for one file, and all auxiliar functions to that file must
@@ -199,6 +221,7 @@ less than 80 characters.
  2. Global functions and variables must be declared in the header file using the 
     "extern" modificatior. Their definition must be coded in the source files 
     where they are used (except functions). Example:
+    
         /* ---- example.h: -----*/
         extern int example_global;
         extern char state_global;
@@ -228,6 +251,7 @@ less than 80 characters.
  2. Header files must contain ALL constants, macros, type definitions, and
     global function prototypes and variables. The preferred header structure is
     as follows:
+    
         /* File header (generic comment). */
         
         #ifndef __FILENAME_H
@@ -275,17 +299,20 @@ less than 80 characters.
         
         #endif        
  3. Header files must have a conditional compilation with a descriptive name 
-    given its domain and file name, and finish with a _H:
+    given its domain and file name, and finish with a `_H`:
+    
         #ifndef APPMOD_H
         #define APPMOD_H
         ...
         #endif
+        
  4. Only include what is needed. Avoid including what it is not needed (i.e. 
     unused libraries, old headers...)
  5. C/C++ macros and complex constants (i.e. those which are calculated at 
     compile-time) are there to save time, reduce lines of code, improve 
     readability and mitigate typo-like errors. Use them with care, though, and 
     don't forget to wrap complex expressions with parentheses. Example:
+    
         #define A   3
         #define B   4
         /* ---- case 1: */
@@ -313,92 +340,98 @@ less than 80 characters.
 
 11. Reliability, debug easiness and flexibility
 --------------------------------------------------------------------------------
- 1. Based on Holzmann's "The Power of Ten: Rules for Developing Safety Critical 
-    Code", NASA/JPL Laboratory for Reliable Software, available at
-    <http://spinroot.com/gerard/pdf/Power_of_Ten.pdf>, the following rules  
-    should be applied to the software developed for ABS. Their rationale is  
-    detailed in the aforementioned paper. (TODO, modify/remove some of these 
-    rules if necessary)
-        i.  Restrict all code to very simple control flow constructs –do not use 
-            goto statements, setjmp or longjmp constructs, and direct or 
-            indirect recursion. 
-            Exception: "goto" statements can be used to implement cleaning 
-            sections before the return of a function. The purpose of this rule 
-            is only to provide an easy way to clean/free multiple resources 
-            which could have not been gained due to partial errors. Example:
-                int function()
-                {
-                    int error;
-                    if((error = do_something(1)) < 0) goto clean3;
-                    if((error = do_something(2)) < 0) goto clean2;
-                    if((error = do_something(3)) < 0) goto clean1;
-                clean1:
-                    undo_something(3);
-                clean2:
-                    undo_something(2);
-                clean3:
-                    undo_something(1);
-                    return error;
-                }
-       ii.  All loops must have a fixed upper-bound. It must be trivially
-            possible for a checking tool to prove statically that a preset 
-            upper-bound on the number of iterations of a loop cannot be 
-            exceeded. If the loop-bound cannot be proven statically, the rule is 
-            considered violated.
-      iii.  Reduce the number of dynamic allocations to the minimum possible. If
-            the size of memory blocks can be predicted (at compile time), it is
-            compulsory to declare the memory region size statically.
-            Pointers are allowed only when there's a clear justification for 
-            them. If a section initializes a memory block (i.e. calls some of 
-            the malloc() family functions) it is strictly mandatory to include 
-            complementary free calls. 
-       iv.  No function should be longer than what can be printed on a single 
-            sheet of paper in a standard reference format with one line per 
-            statement and one line per declaration. Typically, this means no 
-            more than about 100 lines of code per function.
-        v.  The assertion density of the code should average to a minimum of two 
-            assertions per function. Assertions are used to check for anomalous 
-            conditions that should never happen in real-life executions. 
-            Assertions must always be side-effect free and should be defined as 
-            Boolean tests. When an assertion fails, an explicit recovery action 
-            must be taken, e.g., by returning an error condition to the caller 
-            of the function that executes the failing assertion. Any assertion 
-            for which a static checking tool can prove that it can never fail or 
-            never hold violates this rule. (I.e., it is not possible to satisfy 
-            the rule by adding unhelpful “assert(true)” statements.)
-            A typical use of an assertion would be as follows:
-                if(!c_assert(p >= 0) == true) 
-                {
-                    return ERROR;
-                }
-            with the assertion defined as follows:
-                #define c_assert(e) ((e) ? (true) : \
-                    tst_debugging("%s,%d: assertion '%s' failed\n", \
-                    __FILE__, __LINE__, #e), false)
-            In this definition, __FILE__ and __LINE__ are predefined by the 
-            macro preprocessor to produce the filename and line-number of the 
-            failing assertion. The syntax #e turns the assertion condition e 
-            into a string that is printed as part of the error message. In code 
-            destined for an embedded processor there is of course no place to 
-            print the error message itself – in that case, the call to 
-            tst_debugging is turned into a no-op, and  the assertion turns into 
-            a pure Boolean test that enables error recovery from anomolous 
-            behavior.
-       vi.  The return value of non-void functions must be checked by each 
-            calling function, and the validity of parameters must be checked 
-            inside each function.
-      vii.  The use of pointers should be restricted. Specifically, no more than 
-            one level of dereferencing is allowed. Pointer dereference 
-            operations may not be hidden in macro definitions or inside typedef 
-            declarations. Function pointers are only permitted when the have a
-            direct and clear justification.
-     viii.  All code must be compiled, from the first day of development, with 
-            all compiler warnings enabled at the compiler’s most pedantic 
-            setting. All code must compile with these setting without any 
-            warnings. All code must be checked daily with at least one, but 
-            preferably more than one, state-of-the-art static source code 
-            analyzer and should pass the analyses with zero warnings. 
-            (see <http://spinroot.com/static/index.html>)
+Based on Holzmann's **"The Power of Ten: Rules for Developing Safety Critical 
+Code"**, NASA/JPL Laboratory for Reliable Software, available 
+[here](http://spinroot.com/gerard/pdf/Power_of_Ten.pdf), the following rules
+should be applied to the software developed for ABS. Their rationale is
+detailed in the aforementioned paper. 
+
+1.  Restrict all code to very simple control flow constructs –do not use 
+    goto statements, setjmp or longjmp constructs, and direct or 
+    indirect recursion. 
+    Exception: "goto" statements can be used to implement cleaning 
+    sections before the return of a function. The purpose of this rule 
+    is only to provide an easy way to clean/free multiple resources 
+    which could have not been gained due to partial errors. Example:
+    
+        int function()
+        {
+            int error;
+            if((error = do_something(1)) < 0) goto clean3;
+            if((error = do_something(2)) < 0) goto clean2;
+            if((error = do_something(3)) < 0) goto clean1;
+        clean1:
+            undo_something(3);
+        clean2:
+            undo_something(2);
+        clean3:
+            undo_something(1);
+            return error;
+        }
+        
+2.  All loops must have a fixed upper-bound. It must be trivially
+    possible for a checking tool to prove statically that a preset 
+    upper-bound on the number of iterations of a loop cannot be 
+    exceeded. If the loop-bound cannot be proven statically, the rule is 
+    considered violated.
+3.  Reduce the number of dynamic allocations to the minimum possible. If
+    the size of memory blocks can be predicted (at compile time), it is
+    compulsory to declare the memory region size statically.
+    Pointers are allowed only when there's a clear justification for 
+    them. If a section initializes a memory block (i.e. calls some of 
+    the malloc() family functions) it is strictly mandatory to include 
+    complementary free calls. 
+4.  No function should be longer than what can be printed on a single 
+    sheet of paper in a standard reference format with one line per 
+    statement and one line per declaration. Typically, this means no 
+    more than about 100 lines of code per function.
+5.  The assertion density of the code should average to a minimum of two 
+    assertions per function. Assertions are used to check for anomalous 
+    conditions that should never happen in real-life executions. 
+    Assertions must always be side-effect free and should be defined as 
+    Boolean tests. When an assertion fails, an explicit recovery action 
+    must be taken, e.g., by returning an error condition to the caller 
+    of the function that executes the failing assertion. Any assertion 
+    for which a static checking tool can prove that it can never fail or 
+    never hold violates this rule. (i.e., it is not possible to satisfy 
+    the rule by adding unhelpful `assert(true)` statements.)
+    A typical use of an assertion would be as follows:
+    
+        if(!c_assert(p >= 0) == true) 
+        {
+            return ERROR;
+        }
+    
+    with the assertion defined as follows:
+    
+        #define c_assert(e) ((e) ? (true) : \
+            tst_debugging("%s,%d: assertion '%s' failed\n", \
+            __FILE__, __LINE__, #e), false)
+    
+    In this definition, `__FILE__` and `__LINE__` are predefined by the 
+    macro preprocessor to produce the filename and line-number of the 
+    failing assertion. The syntax #e turns the assertion condition e 
+    into a string that is printed as part of the error message. In code 
+    destined for an embedded processor there is of course no place to 
+    print the error message itself – in that case, the call to 
+    tst_debugging is turned into a no-op, and  the assertion turns into 
+    a pure Boolean test that enables error recovery from anomolous 
+    behavior.
+6.  The return value of non-void functions must be checked by each 
+    calling function, and the validity of parameters must be checked 
+    inside each function.
+7.  The use of pointers should be restricted. Specifically, no more than 
+    one level of dereferencing is allowed. Pointer dereference 
+    operations may not be hidden in macro definitions or inside typedef 
+    declarations. Function pointers are only permitted when the have a
+    direct and clear justification.
+8.  All code must be compiled, from the first day of development, with 
+    all compiler warnings enabled at the compiler’s most pedantic 
+    setting. All code must compile with these setting without any 
+    warnings. All code must be checked daily with at least one, but 
+    preferably more than one, state-of-the-art static source code 
+    analyzer and should pass the analyses with zero warnings. 
+    (see [this link](http://spinroot.com/static/index.html))
 
 
 12. Final remarks
@@ -406,7 +439,7 @@ less than 80 characters.
  1. Any code modifications accepted into the master tree must be compliant with 
     these sets of rules and must compile without warnings using the -Wall 
     option.
- 2. New code must be provided together with a Makefile. Including README 
+ 2. New code must be provided together with a Makefile. Including *README.md* 
     temporary files within certain folders is allowed (and recommended) to save 
     time (and headaches) to the rest of the team.
    
