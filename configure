@@ -81,9 +81,13 @@ check_variable LIB_DIR "${BIN_DIR}/Architecture/Libraries"
 check_variable LIB_FLAG "-L$LIB_DIR"
 check_folder $LIB_DIR
 
+check_variable INCLUDE_DIR_GEN "${BIN_DIR}/Architecture/Include"
+check_folder $INCLUDE_DIR_GEN
+
 check_variable INCLUDE_DIR "${ROOT_DIR}/src/Architecture/Include"
-check_variable INCLUDE_FLAG "-I$INCLUDE_DIR"
 check_folder $INCLUDE_DIR
+
+check_variable INCLUDE_FLAG "-I$INCLUDE_DIR -I$INCLUDE_DIR_GEN"
 
 check_folder "${BIN_DIR}/Architecture/SDB"
 
