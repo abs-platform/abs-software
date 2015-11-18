@@ -46,7 +46,7 @@
 	"raw_data" : false,
 	"type" : "state",
 	"config" : {
-		"update_function" : "get_sensor_value_arduino(1)",
+		"update_function" : "get_sensor_value_arduino",
 		"dimensions" : 1,
 		"return_type" : "float",
 		"unit" : "K",

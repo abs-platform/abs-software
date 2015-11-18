@@ -12,11 +12,9 @@
 #define MCSG_TYPE_STATE_DEC 65536
 #define MCSG_TYPE_PAYLOAD_DEC 131072
 
-#define MCS_TYPE_MESSAGE   0     /*      Temporary constants until         */
-#define MCS_TYPE_STATE     1     /*      #include "../include/mcs.h        */
-#define MCS_TYPE_PAYLOAD   2     /*      works properly                    */
+#define NO_AUTO_MCS
 
-#include "../include/mcs.h"
+#include "mcs.h"
 
 /*Buffers*/
 typedef struct MCSGCommand {

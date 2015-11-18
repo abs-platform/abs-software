@@ -62,8 +62,9 @@ struct MCSCommandOptionsPayload {
     const char *data;
 };
 
+#ifndef NO_AUTO_MCS
 // DEBUG!
-static inline void *auto_get_temperature_arduino()
+static inline void *get_sensor_value_arduino()
 {
     return NULL;
 }
@@ -99,5 +100,6 @@ static inline MCSCommand mcs_command(MCSPacket *pkt)
 {
     return ((unsigned int)pkt->type << 2) | (unsigned int)pkt->cmd;
 }
+#endif
 
 #endif

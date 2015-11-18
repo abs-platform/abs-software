@@ -2,9 +2,23 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
+#include <ctype.h>
 #include "cJSON.h"
 #include "mcsg.h"
-#include "../include/mcs.h"
+#include "mcs.h"
+
+static char *str_to_upper(const char *str)
+{
+    size_t i;
+    char *str_out = malloc(strlen(str) + 1);
+    for(i = 0; str[i]; i++) {
+        str_out[i] = toupper(str[i]);
+    }
+
+    str_out[i] = 0; /* NULL character */
+
+    return str_out;
+}
 
 int mcsg_type_identifier(cJSON *json)
 {
@@ -20,6 +34,7 @@ int mcsg_type_identifier(cJSON *json)
 void mcsg_message_translator(cJSON *json, FILE *out)
 {
     cJSON *subitem;
+    char *group_name;
     
     json = json->child;
     fprintf(out, "    {\n    .cmd = {\n        .name = \"%s\",\n", json->valuestring);
@@ -41,10 +56,14 @@ void mcsg_message_translator(cJSON *json, FILE *out)
     fprintf(out, "    .origin_groups = {");
     if(json->child) {
         subitem = json->child;
-        fprintf(out, "%s", subitem->valuestring);
+        group_name = str_to_upper(subitem->valuestring);
+        fprintf(out, "SDB_GROUP_%s", group_name);
+        free(group_name);
         while(subitem->next) {
+            group_name = str_to_upper(subitem->valuestring);
             subitem = subitem->next;
-            fprintf(out, ", %s", subitem->valuestring);
+            fprintf(out, ", SDB_GROUP_%s", group_name);
+            free(group_name);
         }
     }
     fprintf(out, "},\n");
@@ -52,10 +71,14 @@ void mcsg_message_translator(cJSON *json, FILE *out)
     fprintf(out, "    .destination_groups = {");
     if(json->child) {
         subitem = json->child;
-        fprintf(out, "%s", subitem->valuestring);
+        group_name = str_to_upper(subitem->valuestring);
+        fprintf(out, "SDB_GROUP_%s", group_name);
+        free(group_name);
         while(subitem->next) {
             subitem = subitem->next;
-            fprintf(out, ", %s", subitem->valuestring);
+            group_name = str_to_upper(subitem->valuestring);
+            fprintf(out, ", SDB_GROUP_%s", group_name);
+            free(group_name);
         }
     }
     fprintf(out, "},\n");
@@ -65,6 +88,7 @@ void mcsg_message_translator(cJSON *json, FILE *out)
 void mcsg_state_translator(cJSON *json, FILE *out)
 {
     cJSON *subitem;
+    char *group_name;
     
     json = json->child;
     fprintf(out, "    {\n    .cmd = {\n        .name = \"%s\",\n", json->valuestring);
@@ -94,7 +118,7 @@ void mcsg_state_translator(cJSON *json, FILE *out)
     json = json->next;
     fprintf(out, "    .dimensions = %d,\n", json->valueint);
     json = json->next->next;
-    fprintf(out, "    /*Unit: %s/\n", json->valuestring);
+    fprintf(out, "    /*Unit: %s*/\n", json->valuestring);
     json = json->next;
     if(!(json->valueint)) fprintf(out, "    /*Dimension_name: NULL*/\n");
     else fprintf(out, "    /*Dimension_name: %s*/\n", json->valuestring);
@@ -103,13 +127,17 @@ void mcsg_state_translator(cJSON *json, FILE *out)
         fprintf(out, "    .expire_group = {\n");
         json = json->child;
         subitem = json->child;
-        fprintf(out, "            { .group = %s, .max_espire = %d },\n", subitem->string, 
+        group_name = str_to_upper(subitem->string);
+        fprintf(out, "            { .group = SDB_GROUP_%s, .max_expire = %d },\n", group_name, 
                 subitem->valueint);
+        free(group_name);
         while(json->next) {
             json = json->next;
             subitem = json->child;
-            fprintf(out, "            { .group = %s, .max_espire = %d },\n", subitem->string, 
+            group_name = str_to_upper(subitem->string);
+            fprintf(out, "            { .group = SDB_GROUP_%s, .max_expire = %d },\n", group_name, 
                     subitem->valueint);
+            free(group_name);
         }
         fprintf(out, "        },\n");
     } else {
@@ -152,7 +180,7 @@ void mcsg_payload_translator(cJSON *json, FILE *out)
 
 MCSGCommandList *mcsg_commands_reader(cJSON *json)
 {
-    int type_id, i, command_count;
+    int type_id, command_count;
     char *command_name, *prefix;
     bool first_message = true, first_state = true, first_payload = true, first_enum = true;
     MCSGCommand *message_list, *temp_message;
@@ -193,10 +221,7 @@ MCSGCommandList *mcsg_commands_reader(cJSON *json)
                 /*Index to enum list*/
                 prefix = "MCS_MESSAGE_";
                 temp_enum = malloc(sizeof(struct MCSGEnumList));
-                command_name = malloc(sizeof(json->child->valuestring));
-                for(i = 0; json->child->valuestring[i]; i++) {
-                    command_name[i] = toupper(json->child->valuestring[i]);
-                }
+                command_name = str_to_upper(json->child->valuestring);
                 temp_enum->name = malloc(strlen(command_name)+strlen(prefix));
                 strcpy(temp_enum->name, prefix);
                 strcat(temp_enum->name, command_name);
@@ -224,10 +249,7 @@ MCSGCommandList *mcsg_commands_reader(cJSON *json)
                 /*Index to enum list*/
                 prefix = "MCS_STATE_";
                 temp_enum = malloc(sizeof(struct MCSGEnumList));
-                command_name = malloc(sizeof(json->child->valuestring));
-                for(i = 0; json->child->valuestring[i]; i++) {
-                    command_name[i] = toupper(json->child->valuestring[i]);
-                }
+                command_name = str_to_upper(json->child->valuestring);
                 temp_enum->name = malloc(strlen(command_name)+strlen(prefix)+1);
                 strcpy(temp_enum->name, prefix);
                 strcat(temp_enum->name, command_name);
@@ -253,12 +275,9 @@ MCSGCommandList *mcsg_commands_reader(cJSON *json)
                 }
                 
                 /*Index to enum list*/
-                prefix = "MCS_SPAYLOAD_";
+                prefix = "MCS_PAYLOAD_";
                 temp_enum = malloc(sizeof(struct MCSGEnumList));
-                command_name = malloc(sizeof(json->child->valuestring));
-                for(i = 0; json->child->valuestring[i]; i++) {
-                    command_name[i] = toupper(json->child->valuestring[i]);
-                }
+                command_name = str_to_upper(json->child->valuestring);
                 temp_enum->name = malloc(strlen(command_name)+strlen(prefix)+1);
                 strcpy(temp_enum->name, prefix);
                 strcat(temp_enum->name, command_name);
@@ -276,6 +295,8 @@ MCSGCommandList *mcsg_commands_reader(cJSON *json)
                 break;
         }
         json = json->next;
+
+        free(command_name);
     } while(json);
     
     command_list->messages = message_list;
@@ -361,7 +382,8 @@ void mcsg_enum_translator(MCSGEnumList *enum_list, FILE *out)
 
 void mcsg_java_translator(MCSGEnumList *enum_list, FILE *out)
 {
-    int i, understroke;
+    size_t i;
+    int understroke;
     /*Print the java headers*/
     fprintf(out, "public class SDBPacket {\n\n    public enum CMD {\n\n");
     
@@ -389,7 +411,7 @@ void mcsg_java_translator(MCSGEnumList *enum_list, FILE *out)
     
 }
 
-void main() {
+int main() {
     FILE *f, *out; 
     long len; 
     char *data; 
@@ -397,7 +419,7 @@ void main() {
     MCSGCommandList *commandlist;
 
     /*Open the json file*/
-    f = fopen("mcsg_json_commands.json", "r");
+    f = fopen("mcsg.json", "r");
     fseek(f, 0, SEEK_END); 
     len = ftell(f);
     fseek(f, 0, SEEK_SET);
@@ -413,8 +435,8 @@ void main() {
         /*Place individual commands in their respective buffers*/
         commandlist = mcsg_commands_reader(json);
         
-        /*Tanslate and print to 'printed.c'*/
-        out = fopen("mcsg_printed.c", "w");
+        /*Translate and print to 'printed.c'*/
+        out = fopen("auto_mcs.h", "w");
         mcsg_commands_translator(commandlist, out);
         fclose(out);
         
@@ -428,4 +450,6 @@ void main() {
     
     cJSON_Delete(json);
     free(data);
+
+    return 0;
 }
