@@ -17,13 +17,16 @@ src/app_module/app/libs
 
 # Object/Compiled libraries files
 *.o
+*.o_h
 *.d
 *.so
 *.jar
 
 # Binaries
+/src/Architecture/MCS/mcsg
 /src/Architecture/MCS/Test/mcs
 /src/Architecture/SDB/sdb
+/src/Architecture/SDB/Test/sdb
 
 # Auto generated files
 auto_*
