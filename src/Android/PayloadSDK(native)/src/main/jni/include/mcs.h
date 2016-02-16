@@ -74,9 +74,9 @@ static inline void *auto_get_temperature_arduino()
 
 static const int mcs_command_list_size[] =
 {
-    mcs_command_message_list_size,
-    mcs_command_state_list_size,
-    mcs_command_payload_list_size,
+    MCS_COMMAND_MESSAGE_LIST_SIZE,
+    MCS_COMMAND_STATE_LIST_SIZE,
+    MCS_COMMAND_PAYLOAD_LIST_SIZE,
 };
 
 void mcs_free(MCSPacket *pkt);

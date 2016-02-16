@@ -346,8 +346,8 @@ void mcsg_commands_translator(MCSGCommandList *command_list, FILE *out)
         command_list_size++;
     }
     
-    fprintf(out, "};\n\n#define mcs_command_message_list_size %d\n\n", command_list_size);
     
+    fprintf(out, "};\n\n#define MCS_COMMAND_MESSAGE_LIST_SIZE %d\n\n", command_list_size);
     /*Print the state header, state(s), and footer*/
     fprintf(out, "static const struct MCSCommandOptionsState mcs_command_state_list[] =\n{\n");
     
@@ -359,8 +359,8 @@ void mcsg_commands_translator(MCSGCommandList *command_list, FILE *out)
         command_list_size++;
     }
     
-    fprintf(out, "};\n\n#define mcs_command_state_list_size %d\n\n", command_list_size);
     
+    fprintf(out, "};\n\n#define MCS_COMMAND_STATE_LIST_SIZE %d\n\n", command_list_size);
     /*Print the payload header, payload(s), an footer*/
     fprintf(out, "static const struct MCSCommandOptionsPayload mcs_command_payload_list[] =\n{\n");
     
@@ -372,7 +372,7 @@ void mcsg_commands_translator(MCSGCommandList *command_list, FILE *out)
         command_list_size++;
     }
     
-    fprintf(out, "};\n\n#define mcs_command_payload_list_size %d\n\n#endif", command_list_size);
+    fprintf(out, "};\n\n#define MCS_COMMAND_PAYLOAD_LIST_SIZE %d\n\n#endif", command_list_size);
 }
 
 void mcsg_enum_translator(MCSGEnumList *enum_list, FILE *out)
