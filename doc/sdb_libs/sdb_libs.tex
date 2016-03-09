@@ -1,0 +1,133 @@
+\documentclass[12pt,a4paper]{report}
+
+\usepackage[a4paper]{geometry}
+\usepackage[utf8]{inputenc}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{parskip}
+
+\definecolor{light-gray}{gray}{0.8}
+
+\lstset{backgroundcolor=\color{light-gray}, language=bash, basicstyle=\ttfamily\scriptsize, tabsize=2, showstringspaces=false}
+
+\begin{document}
+
+\section*{SDB Libraries}
+
+\subsection*{Introduction}
+The System Data Bus (SDB) libraries are the interface between any system component (Procman, HWmod...), and the SDB.
+
+The following chapters describe the methods that can be used, and the working process of these libraries.
+
+\subsection*{Methods}
+\subsubsection*{\texttt{int sdb\_init(void)}}
+Initialize the SDB libraries. Must be called before any other library method.
+
+Returns: error code
+
+\subsubsection*{\texttt{void sdb\_uninit(void)}}
+Clean up the environment set up by the SDB libraries.
+
+\subsubsection*{\texttt{int sdb\_connect(const char *name, SDBGroup group)}}
+Connect to the SDB. If the group of this module has some required callbacks that are not registered yet, this call will fail.
+
+\begin{itemize}
+\item \texttt{name}: String containing the name of the module.
+\item \texttt{group}: Group of this module.
+\end{itemize}
+
+Returns: error code
+
+\subsubsection*{\texttt{int sdb\_disconnect(void)}}
+Disconnect from the SDB. No new packets will be received or sent, but callbacks won't be unregistered.
+
+Returns: error code
+
+\subsubsection*{\texttt{int sdb\_register\_callback(MCSCommand cmd, void (*callback)(MCSPacket *pkt))}}
+Register a callback for a certain command.
+
+\begin{itemize}
+\item \texttt{cmd}: Command to detect.
+\item \texttt{callback}: Callback function. Gets an \texttt{MCSPacket *} as an argument, and doesn't return any data.
+\end{itemize}
+
+Returns: error code
+
+\subsubsection*{\texttt{int sdb\_unregister\_callback(MCSCommand cmd)}}
+Unregisters the callback for a certain command.
+
+\begin{itemize}
+\item \texttt{cmd}: Command that will be unregistered.
+\end{itemize}
+
+Returns: error code
+
+\subsubsection*{\texttt{int sdb\_send\_sync(MCSPacket *pkt\_in, MCSPacket *pkt\_out)}}
+Sends the given packet and blocks until the answer is received.
+
+\begin{itemize}
+\item \texttt{pkt\_in}: Packet to send
+\item \texttt{pkt\_out}: Received packet
+\end{itemize}
+
+Returns: error code
+
+\subsubsection*{\texttt{int sdb\_send\_sync\_and\_free(MCSPacket *pkt\_in, MCSPacket *pkt\_out)}}
+Sends the given packet and blocks until the answer is received. The memory region for the sent packet is freed.
+
+Refer to \texttt{sdb\_send\_sync} for information on parameters and return values.
+
+\subsubsection*{\texttt{int sdb\_send\_async(MCSPacket *pkt\_in, SDBAsyncPacket *pkt\_out)}}
+Sends the given packet and returns. Type \texttt{SDBAsyncPacket} is defined as follows:
+
+\begin{lstlisting}
+typedef struct SDBAsyncPacket {
+    MCSPacket *pkt;
+    bool pkt_valid;
+    pthread_mutex_t pkt_mutex;
+    pthread_cond_t pkt_cond;
+} SDBAsyncPacket;
+\end{lstlisting}
+
+\begin{itemize}
+\item \texttt{pkt\_in}: Packet to send
+\item \texttt{pkt\_out}: Received packet. \texttt{pkt\_out->pkt} will be a valid memory region when \texttt{pkt\_valid} is true. Use \texttt{sdb\_wait\_async} and \texttt{sdb\_check\_async} to access this field.
+\end{itemize}
+
+Returns: error code
+
+\subsubsection*{\texttt{int sdb\_send\_async\_and\_free(MCSPacket *pkt\_in, SDBAsyncPacket *pkt\_out)}}
+Sends the given packet and returns. The memory region for the sent packet is freed.
+
+Refer to \texttt{int sdb\_send\_async} for information on parameters and return values.
+
+\subsubsection*{\texttt{int sdb\_wait\_async(SDBAsyncPacket *pkt)}}
+Block until the packet contains valid data
+
+\begin{itemize}
+\item \texttt{pkt}: The packet to wait for.
+\end{itemize}
+
+Returns: error code
+
+\subsubsection*{\texttt{int sdb\_check\_async(SDBAsyncPacket *pkt)}}
+Check the packet contains valid data
+
+\begin{itemize}
+\item \texttt{pkt}: The packet to check.
+\end{itemize}
+
+Returns: 0 if there is no valid data, 1 if there is valid data, or an error code
+
+\subsection*{Work flow}
+This section explains what happens in each state of the SDB libraries.
+
+When the function \texttt{sdb\_init} is called, all the buffers and structures are allocated and initialized. Next, some callbacks may be registered using \texttt{sdb\_register\_callback}. These callbacks will be added to a ``callback table".
+
+The last step of initialization is to call \texttt{sdb\_connect}. This function will start a thread that will be listening to packets from the SDB. If these packets are the answer to some packet sent previously by the module, they will be redirected to the processing thread. Otherwise, if the packet contains a command that has a registered callback, a new thread will be started, to run that callback. Finally, if the packet cannot be processed, an error message will be returned to the SDB.
+
+When the function \texttt{sdb\_send\_sync} is called, the calling thread will send the packet to the SDB, will register the packet ID in the ``answer pending" table, and will block until the answer is received. When the thread listening to the SDB socket receives an answer packet, it will check in the ``answer pending" table, and will wake up the thread that sent the packet, so it can return from the function and continue executing.
+
+When the function \texttt{sdb\_send\_async} is called, the calling thread will send the packet to the SDB and will register the packet ID in the ``answer pending" table. Then, the function will return. When the thread listening to the SDB socket receives an answer packet, it will check in the ``answer pending" table, and will mark the previously allocated area for the MCS packet as valid. If \texttt{sdb\_wait\_async} was called, the thread that was waiting is woken up.
+
+\end{document}
