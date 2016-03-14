@@ -51,7 +51,14 @@ void mcsg_message_translator(cJSON *json, FILE *out)
      *  The original 'json' variable will continue to point in the logical, sequential order*/
     subitem = json->next->next->next;
     fprintf(out, "        .response_size = %d,\n", subitem->valueint);
-    fprintf(out, "    },\n    .destination = \"%s\",\n", json->valuestring);
+    fprintf(out, "    },\n");
+
+    if (json->valuestring == NULL) {
+        fprintf(out, "    .destination = NULL,\n");
+    } else {
+        fprintf(out, "    .destination = \"%s\",\n", json->valuestring);
+    }
+
     json = json->next;
     fprintf(out, "    .origin_groups = {");
     if(json->child) {
