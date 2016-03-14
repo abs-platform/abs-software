@@ -23,8 +23,8 @@ static void reject_pkt_socket(unsigned int id)
     pthread_mutex_unlock(&sdb_module_lock);
 
     pkt = mcs_read_command(sdb_module[id].rfd, sdb_module[id].wfd);
+    mcs_write_command_and_free(mcs_err_packet(pkt, EBUSY), sdb_module[id].wfd);
     mcs_free(pkt);
-    mcs_write_command_and_free(mcs_err_packet(EBUSY), sdb_module[id].wfd);
     sdb_module[id].data_socket = false;
 }
 
@@ -32,7 +32,7 @@ static void process_pkt_sdb(unsigned int my_id)
 {
     unsigned int dest_index;
     MCSPacket *pkt;
-    
+
     dest_index = *((unsigned int *)sdb_module[my_id].data);
 
     /*
@@ -60,15 +60,16 @@ static void process_pkt_sdb(unsigned int my_id)
     sdb_module[my_id].data_socket = false;
     while(pkt->type != MCS_TYPE_OK && pkt->type != MCS_TYPE_OK_DATA &&
                                                 pkt->type != MCS_TYPE_ERR) {
+        mcs_write_command_and_free(mcs_err_packet(pkt, EBUSY),
+                                        sdb_module[my_id].wfd);
         mcs_free(pkt);
-        mcs_write_command_and_free(mcs_err_packet(EBUSY), sdb_module[my_id].wfd);
-        
+
         while(!sdb_module[my_id].data_socket) {
             pthread_cond_wait(&sdb_module[my_id].cond_var,
                                                     &sdb_module[my_id].lock);
         }
 
-        pkt = mcs_read_command(sdb_module[my_id].rfd, sdb_module[my_id].wfd);        
+        pkt = mcs_read_command(sdb_module[my_id].rfd, sdb_module[my_id].wfd);
         sdb_module[my_id].data_socket = false;
     }
 
@@ -85,7 +86,7 @@ static void process_pkt_message(const MCSPacket *pkt, unsigned int my_id)
     MCSPacket *pkt_res;
 
     if(pkt->cmd >= mcs_command_list_size[MCS_TYPE_MESSAGE]) {
-        mcs_write_command_and_free(mcs_err_packet(ECMDFAULT),
+        mcs_write_command_and_free(mcs_err_packet(pkt, ECMDFAULT),
                                                     sdb_module[my_id].wfd);
         return;
     }
@@ -97,12 +98,14 @@ static void process_pkt_message(const MCSPacket *pkt, unsigned int my_id)
 
     /* Check origin */
     groups = mcs_command_message_list[pkt->cmd].origin_groups;
+
 #ifdef DEBUG
     if(groups == NULL) {
         printf_dbg("Origin groups should not be null\n");
         return;
     }
 #endif
+
     if(groups[0] != SDB_GROUP_ANY) {
         /* Can do this because it is an array, not a pointer */
         list_num = sizeof(groups) / sizeof(groups[0]);
@@ -114,7 +117,7 @@ static void process_pkt_message(const MCSPacket *pkt, unsigned int my_id)
 
         if(i == list_num) {
             printf_dbg("Not enough privileges\n");
-            mcs_write_command_and_free(mcs_err_packet(EPERM),
+            mcs_write_command_and_free(mcs_err_packet(pkt, EPERM),
                                                     sdb_module[my_id].wfd);
             return;
         }
@@ -141,7 +144,7 @@ static void process_pkt_message(const MCSPacket *pkt, unsigned int my_id)
 
     if(i == list_num) {
         printf_dbg("Non valid destination\n");
-        mcs_write_command_and_free(mcs_err_packet(EBADMODID),
+        mcs_write_command_and_free(mcs_err_packet(pkt, EBADMODID),
                                                     sdb_module[my_id].wfd);
         return;
     }
@@ -160,7 +163,7 @@ static void process_pkt_message(const MCSPacket *pkt, unsigned int my_id)
 
         if(i == list_num) {
             printf_dbg("Not enough privileges\n");
-            mcs_write_command_and_free(mcs_err_packet(EPERM),
+            mcs_write_command_and_free(mcs_err_packet(pkt, EPERM),
                                                 sdb_module[my_id].wfd);
             return;
         }
@@ -169,7 +172,7 @@ static void process_pkt_message(const MCSPacket *pkt, unsigned int my_id)
     /* Write question and read answer */
     sdb_module_write_mcs_packet(pkt, dest_index, my_id);
     pkt_res = sdb_module_read_mcs_packet(my_id, dest_index);
-    mcs_write_command(pkt_res, sdb_module[my_id].wfd);
+    mcs_write_command_and_free(pkt_res, sdb_module[my_id].wfd);
 }
 
 static void process_pkt_state(const MCSPacket *pkt, unsigned int my_id)
@@ -181,7 +184,7 @@ static void process_pkt_state(const MCSPacket *pkt, unsigned int my_id)
     const struct MCSCommandOptionsStatePerms *perms;
 
     if(pkt->cmd >= mcs_command_list_size[MCS_TYPE_STATE]) {
-        mcs_write_command_and_free(mcs_err_packet(ECMDFAULT),
+        mcs_write_command_and_free(mcs_err_packet(pkt, ECMDFAULT),
                                                     sdb_module[my_id].wfd);
         return;
     }
@@ -199,7 +202,7 @@ static void process_pkt_state(const MCSPacket *pkt, unsigned int my_id)
             if(perms[i].group == sdb_module[my_id].group) {
                 if(perms[i].max_expire > (time_t)pkt->args[0]) {
                     printf_dbg("Not enough privileges\n");
-                    mcs_write_command_and_free(mcs_err_packet(EPERM),
+                    mcs_write_command_and_free(mcs_err_packet(pkt, EPERM),
                                                     sdb_module[my_id].wfd);
                     return;
                 }
@@ -211,12 +214,11 @@ static void process_pkt_state(const MCSPacket *pkt, unsigned int my_id)
     data_size = mcs_command_state_list[pkt->cmd].cmd.response_size;
     data = mcs_command_state_list[pkt->cmd].request(pkt);
     if(data_size == -1) {
-        mcs_write_command_and_free(
-                            mcs_ok_packet_data(data, strlen((char *)data)),
-                            sdb_module[my_id].wfd);
+        mcs_write_command_and_free(mcs_ok_packet_data(pkt,
+                    data, strlen((char *)data) + 1), sdb_module[my_id].wfd);
     } else {
         /* Send response */
-        mcs_write_command_and_free(mcs_ok_packet_data(data, data_size),
+        mcs_write_command_and_free(mcs_ok_packet_data(pkt, data, data_size),
                                                         sdb_module[my_id].wfd);
     }
     free(data);
@@ -227,7 +229,7 @@ static void process_pkt_payload(const MCSPacket *pkt, unsigned int my_id)
     MCSPacket *pkt_res;
 
     if(pkt->cmd >= mcs_command_list_size[MCS_TYPE_PAYLOAD]) {
-        mcs_write_command_and_free(mcs_err_packet(ECMDFAULT),
+        mcs_write_command_and_free(mcs_err_packet(pkt, ECMDFAULT),
                                                     sdb_module[my_id].wfd);
         return;
     }
@@ -368,8 +370,10 @@ MCSPacket *sdb_module_read_mcs_packet(unsigned int my_id, int from)
         pthread_cond_wait(&sdb_module[my_id].cond_var, &sdb_module[my_id].lock);
         if(sdb_module[my_id].data_valid) {
             id = *((unsigned int *)sdb_module[my_id].data);
-            if(from != -1 && id != (unsigned int)from) {
-                pkt = mcs_err_packet(EBUSY);
+            if (from != -1 && id != (unsigned int)from) {
+                pkt = (MCSPacket *)(sdb_module[my_id].data +
+                                        sizeof(unsigned int));
+                pkt = mcs_err_packet(pkt, EBUSY);
                 sdb_module_write_mcs_packet(pkt, id, my_id);
                 mcs_free(pkt);
                 sdb_module[my_id].data_valid = false;
@@ -381,7 +385,7 @@ MCSPacket *sdb_module_read_mcs_packet(unsigned int my_id, int from)
     pkt = abs_malloccpy(sdb_module[my_id].data + sizeof(unsigned int),
                                                                 sizeof(*pkt));
     if(pkt->dest != NULL) {
-        pkt->dest = abs_malloccpy(pkt->dest, strlen(pkt->dest));    
+        pkt->dest = abs_malloccpy(pkt->dest, strlen(pkt->dest) + 1);
     }
 
     if(pkt->nargs != 0) {
@@ -475,8 +479,8 @@ void *sdb_module_thread(void *arg)
         goto error_pkt;
     }
 
+    mcs_write_command_and_free(mcs_ok_packet(pkt), sdb_module[my_id].wfd);
     mcs_free(pkt);
-    mcs_write_command_and_free(mcs_ok_packet(), sdb_module[my_id].wfd);
 
     sdb_module[my_id].data = malloc(SDB_MODULE_DATA_SIZE);
     sdb_module[my_id].data_valid = false;
@@ -515,7 +519,9 @@ void *sdb_module_thread(void *arg)
             if(sdb_group_priority[sdb_module[my_id].group] <
                             sdb_group_priority[sdb_module[dest_index].group]) {
                 /* Request through socket is more important */
-                pkt = mcs_err_packet(EBUSY);
+                pkt = (MCSPacket *)(sdb_module[my_id].data +
+                                        sizeof(unsigned int));
+                pkt = mcs_err_packet(pkt, EBUSY);
                 sdb_module_write_mcs_packet(pkt, dest_index, my_id);
                 mcs_free(pkt);
             } else {
@@ -531,8 +537,7 @@ void *sdb_module_thread(void *arg)
         if(sdb_module[my_id].data_valid) {
             process_pkt_sdb(my_id);
         } else if(sdb_module[my_id].data_socket) {
-            pkt = mcs_read_command(sdb_module[my_id].rfd,
-                                                    sdb_module[my_id].wfd);
+            pkt = mcs_read_command(sdb_module[my_id].rfd, sdb_module[my_id].wfd);
             if(pkt != NULL) {
                 switch(pkt->type) {
                     case MCS_TYPE_MESSAGE:
@@ -546,7 +551,7 @@ void *sdb_module_thread(void *arg)
                         break;
                     default:
                         printf_dbg("Type is not valid\n");
-                        mcs_write_command_and_free(mcs_err_packet(EUNDEF), 
+                        mcs_write_command_and_free(mcs_err_packet(pkt, EUNDEF),
                                                         sdb_module[my_id].wfd);
                         break;
                 }
@@ -565,7 +570,7 @@ void *sdb_module_thread(void *arg)
     goto error_ret;
 
 error_pkt:
-    mcs_write_command_and_free(mcs_err_packet(ECONNREFUSED),
+    mcs_write_command_and_free(mcs_err_packet(pkt, ECONNREFUSED),
                                                     sdb_module[my_id].wfd);
     mcs_free(pkt);
 error_ret:

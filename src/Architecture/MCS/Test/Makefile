@@ -1,7 +1,7 @@
 TEST = mcs
 SOURCES = mcs.c
 
-LOCAL_LDFLAGS = -labs_test -lmcs
+LOCAL_LDFLAGS = -labs -labs_test -lmcs
 
 OBJS = $(SOURCES:%.c=%.o)
 DEPS = $(SOURCES:%.c=%.d)

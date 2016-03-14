@@ -206,10 +206,10 @@ void *sdb_test_thread(void *arg)
             goto error;
         } else if(mcs_command(pkt) != MCS_MESSAGE_TEST) {
             abs_test_printf("Packet is not the TEST packet\n");
-            mcs_write_command_and_free(mcs_err_packet(EUNDEF), fd);
+            mcs_write_command_and_free(mcs_err_packet(pkt, EUNDEF), fd);
             goto error_free;
         } else {
-            mcs_write_command_and_free(mcs_ok_packet(), fd);
+            mcs_write_command_and_free(mcs_ok_packet(pkt), fd);
         }
     }
 

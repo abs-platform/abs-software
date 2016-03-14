@@ -18,6 +18,7 @@ enum MCSType {
 
 /* Datatype for the packets that can be sent to and from the SDB */
 typedef struct MCSPacket {
+    unsigned int id;
     enum MCSType type;
     unsigned short cmd;
     unsigned short nargs;
@@ -79,15 +80,18 @@ static const int mcs_command_list_size[] =
     MCS_COMMAND_PAYLOAD_LIST_SIZE,
 };
 
+/* Will be called when the library is loaded */
+void mcs_init(void) __attribute__((constructor));
+
 void mcs_free(MCSPacket *pkt);
 
 MCSPacket *mcs_read_command(int rfd, int wfd);
 int mcs_write_command(MCSPacket *pkt, int fd);
 int mcs_write_command_and_free(MCSPacket *pkt, int fd);
 
-MCSPacket *mcs_ok_packet_data(void *data, size_t size);
-MCSPacket *mcs_ok_packet(void);
-MCSPacket *mcs_err_packet(int err_code);
+MCSPacket *mcs_ok_packet_data(const MCSPacket *from, void *data, size_t size);
+MCSPacket *mcs_ok_packet(const MCSPacket *from);
+MCSPacket *mcs_err_packet(const MCSPacket *from, int err_code);
 MCSPacket *mcs_create_packet(MCSCommand cmd, unsigned short nargs,
         unsigned char *args, unsigned short data_size, unsigned char *data);
 MCSPacket *mcs_create_packet_with_dest(MCSCommand cmd, char *dest,
