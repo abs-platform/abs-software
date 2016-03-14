@@ -474,7 +474,7 @@ int main() {
         fclose(out);
 
         /*Translate to java*/
-        out = fopen("mcsg_java_printed.java", "w");
+        out = fopen("auto_mcs.java", "w");
         mcsg_java_translator(commandlist->enums, out);
         fclose(out);
 
