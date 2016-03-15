@@ -7,6 +7,8 @@
 #include <sdb.h>
 #include "sdb_private.h"
 
+pthread_key_t sdb_module_info;
+
 void sdb_director_clean(void *arg)
 {
     int fd = *((int *)arg);
@@ -50,6 +52,8 @@ void *sdb_director_thread()
         printf_dbg("Can't listen to socket\n");
         goto error;
     }
+
+    pthread_key_create(&sdb_module_info, NULL);
 
     retry = 5;
 

@@ -9,10 +9,16 @@
 SDBModule sdb_module[SDB_MODULE_MAX];
 unsigned int sdb_module_last = 0;
 pthread_mutex_t sdb_module_lock;
+pthread_key_t sdb_module_info;
 
-static void queue_push(MCSPacket *pkt, unsigned int id_origin,
-                        unsigned int my_id)
+static SDBModule *get_info(void)
 {
+    return (SDBModule *)pthread_getspecific(sdb_module_info);
+}
+
+static void queue_push(MCSPacket *pkt, unsigned int id_origin)
+{
+    SDBModule *mod = get_info();
     SDBModuleQueue *queue = malloc(sizeof(*queue));
     SDBModulePacket *sdb_pkt = malloc(sizeof(*sdb_pkt));
 
@@ -21,20 +27,21 @@ static void queue_push(MCSPacket *pkt, unsigned int id_origin,
     queue->pkt = sdb_pkt;
     queue->next = NULL;
 
-    if (sdb_module[my_id].queue_first == NULL) {
-        sdb_module[my_id].queue_first = queue;
+    if (mod->queue_first == NULL) {
+        mod->queue_first = queue;
     } else {
-        sdb_module[my_id].queue_last->next = queue;
+        mod->queue_last->next = queue;
     }
 
-    sdb_module[my_id].queue_last = queue;
+     mod->queue_last = queue;
 }
 
-SDBModulePacket *queue_get(MCSPacket *answer, unsigned int my_id)
+SDBModulePacket *queue_get(MCSPacket *answer)
 {
+    SDBModule *mod = get_info();
     SDBModulePacket *res;
     SDBModuleQueue *queue_prev = NULL;
-    SDBModuleQueue *queue = sdb_module[my_id].queue_first;
+    SDBModuleQueue *queue = mod->queue_first;
 
     while (queue != NULL && queue->pkt->pkt->id != answer->id) {
         queue_prev = queue;
@@ -49,12 +56,12 @@ SDBModulePacket *queue_get(MCSPacket *answer, unsigned int my_id)
         queue_prev->next = queue->next;
     } else {
         /* queue was the first. Now the first is tne next */
-        sdb_module[my_id].queue_first = queue->next;
+        mod->queue_first = queue->next;
     }
 
     if (queue->next == NULL) {
         /* queue was the last. Now the last is queue_prev */
-        sdb_module[my_id].queue_last = queue_prev;
+        mod->queue_last = queue_prev;
     }
 
     res = queue->pkt;
@@ -63,8 +70,9 @@ SDBModulePacket *queue_get(MCSPacket *answer, unsigned int my_id)
     return res;
 }
 
-static void process_pkt_message(MCSPacket *pkt, unsigned int my_id)
+static void process_pkt_message(MCSPacket *pkt)
 {
+    SDBModule *mod = get_info();
     unsigned int i;
     size_t list_num;
     unsigned int dest_index;
@@ -72,8 +80,7 @@ static void process_pkt_message(MCSPacket *pkt, unsigned int my_id)
     const SDBGroup *groups;
 
     if(pkt->cmd >= mcs_command_list_size[MCS_TYPE_MESSAGE]) {
-        mcs_write_command_and_free(mcs_err_packet(pkt, ECMDFAULT),
-                                                    sdb_module[my_id].wfd);
+        mcs_write_command_and_free(mcs_err_packet(pkt, ECMDFAULT), mod->wfd);
         return;
     }
 
@@ -88,8 +95,7 @@ static void process_pkt_message(MCSPacket *pkt, unsigned int my_id)
 #ifdef DEBUG
     if(groups == NULL) {
         printf_dbg("Origin groups should not be null\n");
-        mcs_write_command_and_free(mcs_err_packet(pkt, EUNDEF),
-                                                    sdb_module[my_id].wfd);
+        mcs_write_command_and_free(mcs_err_packet(pkt, EUNDEF), mod->wfd);
         return;
     }
 #endif
@@ -98,15 +104,14 @@ static void process_pkt_message(MCSPacket *pkt, unsigned int my_id)
         /* Can do this because it is an array, not a pointer */
         list_num = sizeof(groups) / sizeof(groups[0]);
         for(i = 0; i < list_num; ++i) {
-            if(groups[i] == sdb_module[my_id].group) {
+            if(groups[i] == mod->group) {
                 break;
             }
         }
 
         if(i == list_num) {
             printf_dbg("Not enough privileges\n");
-            mcs_write_command_and_free(mcs_err_packet(pkt, EPERM),
-                                                    sdb_module[my_id].wfd);
+            mcs_write_command_and_free(mcs_err_packet(pkt, EPERM), mod->wfd);
             return;
         }
     }
@@ -132,8 +137,7 @@ static void process_pkt_message(MCSPacket *pkt, unsigned int my_id)
 
     if(i == list_num) {
         printf_dbg("Non valid destination\n");
-        mcs_write_command_and_free(mcs_err_packet(pkt, EBADMODID),
-                                                    sdb_module[my_id].wfd);
+        mcs_write_command_and_free(mcs_err_packet(pkt, EBADMODID), mod->wfd);
         return;
     }
 
@@ -151,19 +155,19 @@ static void process_pkt_message(MCSPacket *pkt, unsigned int my_id)
 
         if(i == list_num) {
             printf_dbg("Not enough privileges\n");
-            mcs_write_command_and_free(mcs_err_packet(pkt, EPERM),
-                                                sdb_module[my_id].wfd);
+            mcs_write_command_and_free(mcs_err_packet(pkt, EPERM), mod->wfd);
             return;
         }
     }
 
     /* Finally, send */
-    queue_push(pkt, my_id, my_id);
-    sdb_module_write_mcs_packet(pkt, dest_index, my_id);
+    queue_push(pkt, mod->id);
+    sdb_module_write_mcs_packet(pkt, dest_index);
 }
 
-static void process_pkt_state(MCSPacket *pkt, unsigned int my_id)
+static void process_pkt_state(MCSPacket *pkt)
 {
+    SDBModule *mod = get_info();
     unsigned int i;
     size_t list_num;
     int data_size;
@@ -171,8 +175,7 @@ static void process_pkt_state(MCSPacket *pkt, unsigned int my_id)
     const struct MCSCommandOptionsStatePerms *perms;
 
     if(pkt->cmd >= mcs_command_list_size[MCS_TYPE_STATE]) {
-        mcs_write_command_and_free(mcs_err_packet(pkt, ECMDFAULT),
-                                                    sdb_module[my_id].wfd);
+        mcs_write_command_and_free(mcs_err_packet(pkt, ECMDFAULT), mod->wfd);
         return;
     }
 
@@ -186,11 +189,11 @@ static void process_pkt_state(MCSPacket *pkt, unsigned int my_id)
     if(perms != NULL) {
         list_num = sizeof(perms) / sizeof(perms[0]);
         for(i = 0; i < list_num; ++i) {
-            if(perms[i].group == sdb_module[my_id].group) {
+            if(perms[i].group == mod->group) {
                 if(perms[i].max_expire > (time_t)pkt->args[0]) {
                     printf_dbg("Not enough privileges\n");
                     mcs_write_command_and_free(mcs_err_packet(pkt, EPERM),
-                                                    sdb_module[my_id].wfd);
+                                                mod->wfd);
                     return;
                 }
                 break;
@@ -202,20 +205,21 @@ static void process_pkt_state(MCSPacket *pkt, unsigned int my_id)
     data = mcs_command_state_list[pkt->cmd].request(pkt);
     if(data_size == -1) {
         mcs_write_command_and_free(mcs_ok_packet_data(pkt,
-                    data, strlen((char *)data) + 1), sdb_module[my_id].wfd);
+                    data, strlen((char *)data) + 1), mod->wfd);
     } else {
         /* Send response */
         mcs_write_command_and_free(mcs_ok_packet_data(pkt, data, data_size),
-                                                        sdb_module[my_id].wfd);
+                                    mod->wfd);
     }
     free(data);
 }
 
-static void process_pkt_payload(MCSPacket *pkt, unsigned int my_id)
+static void process_pkt_payload(MCSPacket *pkt)
 {
+    SDBModule *mod = get_info();
+
     if(pkt->cmd >= mcs_command_list_size[MCS_TYPE_PAYLOAD]) {
-        mcs_write_command_and_free(mcs_err_packet(pkt, ECMDFAULT),
-                                                    sdb_module[my_id].wfd);
+        mcs_write_command_and_free(mcs_err_packet(pkt, ECMDFAULT), mod->wfd);
         return;
     }
 
@@ -224,66 +228,68 @@ static void process_pkt_payload(MCSPacket *pkt, unsigned int my_id)
     printf("Recived the payload request %s\n",
                                 mcs_command_payload_list[pkt->cmd].cmd.name);
 
-    /* Send */
-    queue_push(pkt, my_id, my_id);
+    /* TODO: Send */
+    queue_push(pkt, mod->id);
     //usb_queue_push(pkt, my_id);
 }
 
 
-static void process_pkt_sdb(unsigned int my_id)
+static void process_pkt_sdb(void)
 {
     unsigned int id_origin;
     MCSPacket *pkt;
     SDBModulePacket *pkt_origin;
+    SDBModule *mod = get_info();
 
-    id_origin = *((unsigned int *)sdb_module[my_id].data);
+    id_origin = *((unsigned int *)mod->data);
 
-    pkt = sdb_module_read_mcs_packet(my_id);
+    pkt = sdb_module_read_mcs_packet();
     if(pkt == NULL) {
         printf_dbg("Packet is wrong (although it arrived to this stage)\n");
         return;
     }
 
     if (mcs_is_answer_packet(pkt)) {
-        pkt_origin = queue_get(pkt, my_id);
+        pkt_origin = queue_get(pkt);
         if (pkt_origin == NULL) {
             /* Sending an answer means closing a communication. Sending an
              * error would start an infinite chain of error messages.
              */
             printf_dbg("Unexpected answer\n");
         } else {
-            mcs_write_command(pkt, sdb_module[my_id].wfd);
+            mcs_write_command(pkt, mod->wfd);
             mcs_free(pkt_origin->pkt);
             free(pkt_origin);
         }
 
         mcs_free(pkt);
     } else {
-        queue_push(pkt, id_origin, my_id);
-        mcs_write_command(pkt, sdb_module[my_id].wfd);
+        queue_push(pkt, id_origin);
+        mcs_write_command(pkt, mod->wfd);
     }
 }
 
-static void process_pkt_socket(unsigned int my_id)
+static void process_pkt_socket(void)
 {
     MCSPacket *pkt;
     SDBModulePacket *pkt_origin;
+    SDBModule *mod = get_info();
 
-    pkt = mcs_read_command(sdb_module[my_id].rfd, sdb_module[my_id].wfd);
+    pkt = mcs_read_command(mod->rfd, mod->wfd);
     if(pkt == NULL) {
         printf_dbg("Packet is wrong (although it arrived to this stage)\n");
         return;
     }
 
     if (mcs_is_answer_packet(pkt)) {
-        pkt_origin = queue_get(pkt, my_id);
+        pkt_origin = queue_get(pkt);
         if (pkt_origin == NULL) {
             printf_dbg("Unexpected answer\n");
             /* Sending an answer means closing a communication. Sending an
              * error would start an infinite chain of error messages.
              */
         } else {
-            sdb_module_write_mcs_packet(pkt, pkt_origin->id_origin, my_id);
+            sdb_module_write_mcs_packet(pkt, pkt_origin->id_origin);
             mcs_free(pkt_origin->pkt);
             free(pkt_origin);
         }
@@ -292,13 +298,13 @@ static void process_pkt_socket(unsigned int my_id)
     } else {
         switch(pkt->type) {
             case MCS_TYPE_MESSAGE:
-                process_pkt_message(pkt, my_id);
+                process_pkt_message(pkt);
                 break;
             case MCS_TYPE_STATE:
-                process_pkt_state(pkt, my_id);
+                process_pkt_state(pkt);
                 break;
             case MCS_TYPE_PAYLOAD:
-                process_pkt_payload(pkt, my_id);
+                process_pkt_payload(pkt);
                 break;
             default:
                 printf_dbg("Unhandled type\n");
@@ -306,18 +312,20 @@ static void process_pkt_socket(unsigned int my_id)
         }
     }
 
-    sdb_module[my_id].data_socket = false;
+    mod->data_socket = false;
 }
 
 
 static void sdb_module_clean(void *arg)
 {
-    unsigned int my_id;
+    SDBModule *mod = get_info();
 
-    my_id = *((unsigned int *)arg);
-    close(sdb_module[my_id].rfd);
-    if(sdb_module[my_id].wfd != sdb_module[my_id].rfd) {
-        close(sdb_module[my_id].wfd);
+    /* arg is not used */
+    (void)arg;
+
+    close(mod->rfd);
+    if(mod->wfd != mod->rfd) {
+        close(mod->wfd);
     }
 }
 
@@ -352,15 +360,14 @@ error_ret:
     close(wfd);
 }
 
-int sdb_module_write_mcs_packet(const MCSPacket *pkt, unsigned int to,
-                                                        unsigned int from)
+int sdb_module_write_mcs_packet(const MCSPacket *pkt, unsigned int to)
 {
+    SDBModule *mod = get_info();
     void *pos_pkt;
     void *pos;
 
     pthread_mutex_lock(&sdb_module_lock);
-    if(to >= sdb_module_last ||
-                        (from > sdb_module_last && from != SDB_USB_ID)) {
+    if(to >= sdb_module_last) {
         pthread_mutex_unlock(&sdb_module_lock);
         printf_dbg("Index not valid\n");
         return -1;
@@ -379,8 +386,8 @@ int sdb_module_write_mcs_packet(const MCSPacket *pkt, unsigned int to,
 
     pos = sdb_module[to].data;
 
-    memcpy(pos, &from, sizeof(from));
-    pos += sizeof(from);
+    memcpy(pos, &mod->id, sizeof(mod->id));
+    pos += sizeof(mod->id);
 
     pos_pkt = pos;
     memcpy(pos_pkt, pkt, sizeof(*pkt));
@@ -415,25 +422,25 @@ int sdb_module_write_mcs_packet(const MCSPacket *pkt, unsigned int to,
     return 0;
 }
 
-MCSPacket *sdb_module_read_mcs_packet(unsigned int my_id)
+MCSPacket *sdb_module_read_mcs_packet(void)
 {
     MCSPacket *pkt;
+    SDBModule *mod = get_info();
 
     pthread_mutex_lock(&sdb_module_lock);
-    if(my_id >= sdb_module_last) {
+    if(mod->id >= sdb_module_last) {
         pthread_mutex_unlock(&sdb_module_lock);
         printf_dbg("Index not valid\n");
         return NULL;
     }
     pthread_mutex_unlock(&sdb_module_lock);
 
-    if(!sdb_module[my_id].data_valid) {
+    if(!mod->data_valid) {
         return NULL;
     }
 
     /* Leave a gap for the first element, the id from the sender */
-    pkt = abs_malloccpy(sdb_module[my_id].data + sizeof(unsigned int),
-                                                                sizeof(*pkt));
+    pkt = abs_malloccpy(mod->data + sizeof(unsigned int), sizeof(*pkt));
     if(pkt->dest != NULL) {
         pkt->dest = abs_malloccpy(pkt->dest, strlen(pkt->dest) + 1);
     }
@@ -446,7 +453,7 @@ MCSPacket *sdb_module_read_mcs_packet(unsigned int my_id)
         pkt->data = abs_malloccpy(pkt->data, pkt->data_size);
     }
 
-    sdb_module[my_id].data_valid = false;
+    mod->data_valid = false;
 
     return pkt;
 }
@@ -464,30 +471,37 @@ void sdb_module_cancel_all(void)
         pthread_cancel(sdb_module[i].thread_id);
         pthread_join(sdb_module[i].thread_id, NULL);
     }
+
+    pthread_key_delete(sdb_module_info);
 }
 
 void *sdb_module_thread(void *arg)
 {
     MCSPacket *pkt;
+    SDBModule *mod;
     unsigned int my_id;
     int i;
     size_t text_size;
     char *group;
 
     my_id = *((unsigned int *)arg);
+    mod = &sdb_module[my_id];
+
+    mod->id = my_id;
 
     pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
-    pthread_cleanup_push(sdb_module_clean, arg);
+    pthread_cleanup_push(sdb_module_clean, NULL);
 
     printf_dbg("Thread %d has been created! Welcome on board!\n", my_id);
 
-    pthread_mutex_init(&sdb_module[my_id].lock, NULL);
-    pthread_cond_init(&sdb_module[my_id].cond_var, NULL);
+    pthread_setspecific(sdb_module_info, mod);
+    pthread_mutex_init(&mod->lock, NULL);
+    pthread_cond_init(&mod->cond_var, NULL);
 
-    pthread_mutex_lock(&sdb_module[my_id].lock);
+    pthread_mutex_lock(&mod->lock);
 
-    pkt = mcs_read_command(sdb_module[my_id].rfd, sdb_module[my_id].wfd);
+    pkt = mcs_read_command(mod->rfd, mod->wfd);
     if(pkt == NULL) {
         printf_dbg("First packet is wrong\n");
         goto error_ret;
@@ -514,12 +528,12 @@ void *sdb_module_thread(void *arg)
 
     /* Remember NULL character! */
     text_size = (size_t)(group - (char *)pkt->data);
-    sdb_module[my_id].name = abs_malloc0(text_size);
-    strncpy((char *)sdb_module[my_id].name, (char *)pkt->data, text_size - 1);
+    mod->name = abs_malloc0(text_size);
+    strncpy((char *)mod->name, (char *)pkt->data, text_size - 1);
 
     for(i = 0; i < SDB_GROUP_MAX; ++i) {
         if(strcmp(group, group_conversion[i].str) == 0) {
-            sdb_module[my_id].group = group_conversion[i].val;
+            mod->group = group_conversion[i].val;
             break;
         }
     }
@@ -529,32 +543,32 @@ void *sdb_module_thread(void *arg)
         goto error_pkt;
     }
 
-    mcs_write_command_and_free(mcs_ok_packet(pkt), sdb_module[my_id].wfd);
+    mcs_write_command_and_free(mcs_ok_packet(pkt), mod->wfd);
     mcs_free(pkt);
 
-    sdb_module[my_id].data = malloc(SDB_MODULE_DATA_SIZE);
-    sdb_module[my_id].data_valid = false;
-    sdb_module[my_id].data_socket = false;
+    mod->data = malloc(SDB_MODULE_DATA_SIZE);
+    mod->data_valid = false;
+    mod->data_socket = false;
 
     /* Now that everything is ready, wake up the observer to notice us */
     sdb_observer_wake_up();
 
     /* Notify threads waiting and leave space for sending messages */
-    pthread_cond_broadcast(&sdb_module[my_id].cond_var);
-    pthread_mutex_unlock(&sdb_module[my_id].lock);
+    pthread_cond_broadcast(&mod->cond_var);
+    pthread_mutex_unlock(&mod->lock);
 
     /* Mutex is always locked when not waiting to cond variable. */
-    pthread_mutex_lock(&sdb_module[my_id].lock);
+    pthread_mutex_lock(&mod->lock);
     while(1) {
-        pthread_cond_wait(&sdb_module[my_id].cond_var, &sdb_module[my_id].lock);
+        pthread_cond_wait(&mod->cond_var, &mod->lock);
 
-        printf_dbg("Module %s has work to do\n", sdb_module[my_id].name);
+        printf_dbg("Module %s has work to do\n", mod->name);
 
-        if(sdb_module[my_id].data_valid) {
+        if(mod->data_valid) {
             /* Socket is full duplex, memory region not */
-            process_pkt_sdb(my_id);
-        } else if(sdb_module[my_id].data_socket) {
-            process_pkt_socket(my_id);
+            process_pkt_sdb();
+        } else if(mod->data_socket) {
+            process_pkt_socket();
         }
     }
 
@@ -562,8 +576,7 @@ void *sdb_module_thread(void *arg)
     goto error_ret;
 
 error_pkt:
-    mcs_write_command_and_free(mcs_err_packet(pkt, ECONNREFUSED),
-                                                    sdb_module[my_id].wfd);
+    mcs_write_command_and_free(mcs_err_packet(pkt, ECONNREFUSED), mod->wfd);
     mcs_free(pkt);
 error_ret:
     pthread_cleanup_pop(1);
