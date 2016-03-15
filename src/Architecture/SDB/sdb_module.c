@@ -10,80 +10,66 @@ SDBModule sdb_module[SDB_MODULE_MAX];
 unsigned int sdb_module_last = 0;
 pthread_mutex_t sdb_module_lock;
 
-static void reject_pkt_socket(unsigned int id)
+static void queue_push(MCSPacket *pkt, unsigned int id_origin,
+                        unsigned int my_id)
 {
-    MCSPacket *pkt;
+    SDBModuleQueue *queue = malloc(sizeof(*queue));
+    SDBModulePacket *sdb_pkt = malloc(sizeof(*sdb_pkt));
 
-    pthread_mutex_lock(&sdb_module_lock);
-    if(id >= sdb_module_last) {
-        pthread_mutex_unlock(&sdb_module_lock);
-        printf_dbg("Index not valid\n");
-        return;
+    sdb_pkt->id_origin = id_origin;
+    sdb_pkt->pkt = pkt;
+    queue->pkt = sdb_pkt;
+    queue->next = NULL;
+
+    if (sdb_module[my_id].queue_first == NULL) {
+        sdb_module[my_id].queue_first = queue;
+    } else {
+        sdb_module[my_id].queue_last->next = queue;
     }
-    pthread_mutex_unlock(&sdb_module_lock);
 
-    pkt = mcs_read_command(sdb_module[id].rfd, sdb_module[id].wfd);
-    mcs_write_command_and_free(mcs_err_packet(pkt, EBUSY), sdb_module[id].wfd);
-    mcs_free(pkt);
-    sdb_module[id].data_socket = false;
+    sdb_module[my_id].queue_last = queue;
 }
 
-static void process_pkt_sdb(unsigned int my_id)
+SDBModulePacket *queue_get(MCSPacket *answer, unsigned int my_id)
 {
-    unsigned int dest_index;
-    MCSPacket *pkt;
+    SDBModulePacket *res;
+    SDBModuleQueue *queue_prev = NULL;
+    SDBModuleQueue *queue = sdb_module[my_id].queue_first;
 
-    dest_index = *((unsigned int *)sdb_module[my_id].data);
-
-    /*
-     * This is the only strange ID that could be written using the
-     * wrappers.
-     */
-    if(dest_index == SDB_USB_ID) {
-        printf_dbg("Unexpected USB packet\n");
-        return;
+    while (queue != NULL && queue->pkt->pkt->id != answer->id) {
+        queue_prev = queue;
+        queue = queue->next;
     }
 
-    pkt = sdb_module_read_mcs_packet(my_id, -1);
-    if(pkt == NULL) {
-        printf_dbg("Packet is wrong (although it arrived to this stage)\n");
+    if (queue == NULL) {
+        return NULL;
     }
 
-    mcs_write_command(pkt, sdb_module[my_id].wfd);
-    mcs_free(pkt);
-
-    while(!sdb_module[my_id].data_socket) {
-        pthread_cond_wait(&sdb_module[my_id].cond_var, &sdb_module[my_id].lock);
+    if (queue_prev != NULL) {
+        queue_prev->next = queue->next;
+    } else {
+        /* queue was the first. Now the first is tne next */
+        sdb_module[my_id].queue_first = queue->next;
     }
 
-    pkt = mcs_read_command(sdb_module[my_id].rfd, sdb_module[my_id].wfd);
-    sdb_module[my_id].data_socket = false;
-    while(pkt->type != MCS_TYPE_OK && pkt->type != MCS_TYPE_OK_DATA &&
-                                                pkt->type != MCS_TYPE_ERR) {
-        mcs_write_command_and_free(mcs_err_packet(pkt, EBUSY),
-                                        sdb_module[my_id].wfd);
-        mcs_free(pkt);
-
-        while(!sdb_module[my_id].data_socket) {
-            pthread_cond_wait(&sdb_module[my_id].cond_var,
-                                                    &sdb_module[my_id].lock);
-        }
-
-        pkt = mcs_read_command(sdb_module[my_id].rfd, sdb_module[my_id].wfd);
-        sdb_module[my_id].data_socket = false;
+    if (queue->next == NULL) {
+        /* queue was the last. Now the last is queue_prev */
+        sdb_module[my_id].queue_last = queue_prev;
     }
 
-    sdb_module_write_mcs_packet(pkt, dest_index, my_id);
+    res = queue->pkt;
+
+    free(queue);
+    return res;
 }
 
-static void process_pkt_message(const MCSPacket *pkt, unsigned int my_id)
+static void process_pkt_message(MCSPacket *pkt, unsigned int my_id)
 {
     unsigned int i;
     size_t list_num;
     unsigned int dest_index;
     const char *dest_name;
     const SDBGroup *groups;
-    MCSPacket *pkt_res;
 
     if(pkt->cmd >= mcs_command_list_size[MCS_TYPE_MESSAGE]) {
         mcs_write_command_and_free(mcs_err_packet(pkt, ECMDFAULT),
@@ -102,6 +88,8 @@ static void process_pkt_message(const MCSPacket *pkt, unsigned int my_id)
 #ifdef DEBUG
     if(groups == NULL) {
         printf_dbg("Origin groups should not be null\n");
+        mcs_write_command_and_free(mcs_err_packet(pkt, EUNDEF),
+                                                    sdb_module[my_id].wfd);
         return;
     }
 #endif
@@ -169,13 +157,12 @@ static void process_pkt_message(const MCSPacket *pkt, unsigned int my_id)
         }
     }
 
-    /* Write question and read answer */
+    /* Finally, send */
+    queue_push(pkt, my_id, my_id);
     sdb_module_write_mcs_packet(pkt, dest_index, my_id);
-    pkt_res = sdb_module_read_mcs_packet(my_id, dest_index);
-    mcs_write_command_and_free(pkt_res, sdb_module[my_id].wfd);
 }
 
-static void process_pkt_state(const MCSPacket *pkt, unsigned int my_id)
+static void process_pkt_state(MCSPacket *pkt, unsigned int my_id)
 {
     unsigned int i;
     size_t list_num;
@@ -224,10 +211,8 @@ static void process_pkt_state(const MCSPacket *pkt, unsigned int my_id)
     free(data);
 }
 
-static void process_pkt_payload(const MCSPacket *pkt, unsigned int my_id)
+static void process_pkt_payload(MCSPacket *pkt, unsigned int my_id)
 {
-    MCSPacket *pkt_res;
-
     if(pkt->cmd >= mcs_command_list_size[MCS_TYPE_PAYLOAD]) {
         mcs_write_command_and_free(mcs_err_packet(pkt, ECMDFAULT),
                                                     sdb_module[my_id].wfd);
@@ -236,16 +221,94 @@ static void process_pkt_payload(const MCSPacket *pkt, unsigned int my_id)
 
     /* Supposing packet is valid, just checking specific configurations */
 
-    printf("Recived the state request %s\n",
+    printf("Recived the payload request %s\n",
                                 mcs_command_payload_list[pkt->cmd].cmd.name);
 
-    /* Write question and read answer */
+    /* Send */
+    queue_push(pkt, my_id, my_id);
     //usb_queue_push(pkt, my_id);
-    pkt_res = sdb_module_read_mcs_packet(my_id, SDB_USB_ID);
-    mcs_write_command(pkt_res, sdb_module[my_id].wfd);
-
-    mcs_free(pkt_res);
 }
+
+
+static void process_pkt_sdb(unsigned int my_id)
+{
+    unsigned int id_origin;
+    MCSPacket *pkt;
+    SDBModulePacket *pkt_origin;
+
+    id_origin = *((unsigned int *)sdb_module[my_id].data);
+
+    pkt = sdb_module_read_mcs_packet(my_id);
+    if(pkt == NULL) {
+        printf_dbg("Packet is wrong (although it arrived to this stage)\n");
+        return;
+    }
+
+    if (mcs_is_answer_packet(pkt)) {
+        pkt_origin = queue_get(pkt, my_id);
+        if (pkt_origin == NULL) {
+            /* Sending an answer means closing a communication. Sending an
+             * error would start an infinite chain of error messages.
+             */
+            printf_dbg("Unexpected answer\n");
+        } else {
+            mcs_write_command(pkt, sdb_module[my_id].wfd);
+            mcs_free(pkt_origin->pkt);
+            free(pkt_origin);
+        }
+
+        mcs_free(pkt);
+    } else {
+        queue_push(pkt, id_origin, my_id);
+        mcs_write_command(pkt, sdb_module[my_id].wfd);
+    }
+}
+
+static void process_pkt_socket(unsigned int my_id)
+{
+    MCSPacket *pkt;
+    SDBModulePacket *pkt_origin;
+
+    pkt = mcs_read_command(sdb_module[my_id].rfd, sdb_module[my_id].wfd);
+    if(pkt == NULL) {
+        printf_dbg("Packet is wrong (although it arrived to this stage)\n");
+        return;
+    }
+
+    if (mcs_is_answer_packet(pkt)) {
+        pkt_origin = queue_get(pkt, my_id);
+        if (pkt_origin == NULL) {
+            printf_dbg("Unexpected answer\n");
+            /* Sending an answer means closing a communication. Sending an
+             * error would start an infinite chain of error messages.
+             */
+        } else {
+            sdb_module_write_mcs_packet(pkt, pkt_origin->id_origin, my_id);
+            mcs_free(pkt_origin->pkt);
+            free(pkt_origin);
+        }
+
+        mcs_free(pkt);
+    } else {
+        switch(pkt->type) {
+            case MCS_TYPE_MESSAGE:
+                process_pkt_message(pkt, my_id);
+                break;
+            case MCS_TYPE_STATE:
+                process_pkt_state(pkt, my_id);
+                break;
+            case MCS_TYPE_PAYLOAD:
+                process_pkt_payload(pkt, my_id);
+                break;
+            default:
+                printf_dbg("Unhandled type\n");
+                break;
+        }
+    }
+
+    sdb_module[my_id].data_socket = false;
+}
+
 
 static void sdb_module_clean(void *arg)
 {
@@ -352,33 +415,20 @@ int sdb_module_write_mcs_packet(const MCSPacket *pkt, unsigned int to,
     return 0;
 }
 
-MCSPacket *sdb_module_read_mcs_packet(unsigned int my_id, int from)
+MCSPacket *sdb_module_read_mcs_packet(unsigned int my_id)
 {
-    unsigned int id;
     MCSPacket *pkt;
 
     pthread_mutex_lock(&sdb_module_lock);
-    if(my_id >= sdb_module_last || (from >= 0 && from != SDB_USB_ID &&
-                        (unsigned int)from >= sdb_module_last)) {
+    if(my_id >= sdb_module_last) {
         pthread_mutex_unlock(&sdb_module_lock);
         printf_dbg("Index not valid\n");
         return NULL;
     }
     pthread_mutex_unlock(&sdb_module_lock);
 
-    while(!sdb_module[my_id].data_valid) {
-        pthread_cond_wait(&sdb_module[my_id].cond_var, &sdb_module[my_id].lock);
-        if(sdb_module[my_id].data_valid) {
-            id = *((unsigned int *)sdb_module[my_id].data);
-            if (from != -1 && id != (unsigned int)from) {
-                pkt = (MCSPacket *)(sdb_module[my_id].data +
-                                        sizeof(unsigned int));
-                pkt = mcs_err_packet(pkt, EBUSY);
-                sdb_module_write_mcs_packet(pkt, id, my_id);
-                mcs_free(pkt);
-                sdb_module[my_id].data_valid = false;
-            }
-        }
+    if(!sdb_module[my_id].data_valid) {
+        return NULL;
     }
 
     /* Leave a gap for the first element, the id from the sender */
@@ -391,6 +441,7 @@ MCSPacket *sdb_module_read_mcs_packet(unsigned int my_id, int from)
     if(pkt->nargs != 0) {
         pkt->args = abs_malloccpy(pkt->args, pkt->nargs);
     }
+
     if(pkt->data_size != 0) {
         pkt->data = abs_malloccpy(pkt->data, pkt->data_size);
     }
@@ -419,7 +470,6 @@ void *sdb_module_thread(void *arg)
 {
     MCSPacket *pkt;
     unsigned int my_id;
-    unsigned int dest_index;
     int i;
     size_t text_size;
     char *group;
@@ -496,73 +546,15 @@ void *sdb_module_thread(void *arg)
     /* Mutex is always locked when not waiting to cond variable. */
     pthread_mutex_lock(&sdb_module[my_id].lock);
     while(1) {
-        while(!sdb_module[my_id].data_valid &&
-                                        !sdb_module[my_id].data_socket) {
-            pthread_cond_wait(&sdb_module[my_id].cond_var, 
-                                                &sdb_module[my_id].lock);
-        }
+        pthread_cond_wait(&sdb_module[my_id].cond_var, &sdb_module[my_id].lock);
 
         printf_dbg("Module %s has work to do\n", sdb_module[my_id].name);
-        if(sdb_module[my_id].data_valid && sdb_module[my_id].data_socket) {
-            /* Data collision, check priorities */
-            dest_index = *((unsigned int *)sdb_module[my_id].data);
 
-            /*
-             * This is the only strange ID that could be written using the
-             * wrappers.
-             */
-            if(dest_index == SDB_USB_ID) {
-                printf_dbg("Unexpected USB packet\n");
-                continue;
-            }
-
-            if(sdb_group_priority[sdb_module[my_id].group] <
-                            sdb_group_priority[sdb_module[dest_index].group]) {
-                /* Request through socket is more important */
-                pkt = (MCSPacket *)(sdb_module[my_id].data +
-                                        sizeof(unsigned int));
-                pkt = mcs_err_packet(pkt, EBUSY);
-                sdb_module_write_mcs_packet(pkt, dest_index, my_id);
-                mcs_free(pkt);
-            } else {
-                /* Request through SDB is more important */
-                reject_pkt_socket(my_id);
-            }
-        }
-
-        /*
-         * Mutex is locked. No new data should have arrived between last
-         * conditional and this conditional.
-         */
         if(sdb_module[my_id].data_valid) {
+            /* Socket is full duplex, memory region not */
             process_pkt_sdb(my_id);
         } else if(sdb_module[my_id].data_socket) {
-            pkt = mcs_read_command(sdb_module[my_id].rfd, sdb_module[my_id].wfd);
-            if(pkt != NULL) {
-                switch(pkt->type) {
-                    case MCS_TYPE_MESSAGE:
-                        process_pkt_message(pkt, my_id);
-                        break;
-                    case MCS_TYPE_STATE:
-                        process_pkt_state(pkt, my_id);
-                        break;
-                    case MCS_TYPE_PAYLOAD:
-                        process_pkt_payload(pkt, my_id);
-                        break;
-                    default:
-                        printf_dbg("Type is not valid\n");
-                        mcs_write_command_and_free(mcs_err_packet(pkt, EUNDEF),
-                                                        sdb_module[my_id].wfd);
-                        break;
-                }
-
-                sdb_module[my_id].data_socket = false;
-
-                mcs_free(pkt);
-            } else {
-                printf_dbg("There should be data in the socket, "
-                                                        "but there isn't\n");
-            }
+            process_pkt_socket(my_id);
         }
     }
 

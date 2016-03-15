@@ -98,8 +98,9 @@ MCSPacket *mcs_create_packet_with_dest(MCSCommand cmd, char *dest,
                             unsigned short nargs, unsigned char *args,
                             unsigned short data_size, unsigned char *data);
 
-int mcs_err_code_from_command(MCSPacket *pkt);
-const char *mcs_command_to_string(MCSPacket *pkt);
+int mcs_err_code_from_command(const MCSPacket *pkt);
+const char *mcs_command_to_string(const MCSPacket *pkt);
+bool mcs_is_answer_packet(const MCSPacket *pkt);
 static inline MCSCommand mcs_command(MCSPacket *pkt)
 {
     return ((unsigned int)pkt->type << 2) | (unsigned int)pkt->cmd;

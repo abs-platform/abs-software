@@ -515,7 +515,7 @@ MCSPacket *mcs_create_packet_with_dest(MCSCommand cmd, char *dest,
     }
 }
 
-int mcs_err_code_from_command(MCSPacket *pkt)
+int mcs_err_code_from_command(const MCSPacket *pkt)
 {
     int *err_code;
     if(pkt->data_size == sizeof(int)) {
@@ -526,7 +526,7 @@ int mcs_err_code_from_command(MCSPacket *pkt)
     }
 }
 
-const char *mcs_command_to_string(MCSPacket *pkt)
+const char *mcs_command_to_string(const MCSPacket *pkt)
 {
     static const char *err = "error";
     static const char *ok = "ok";
@@ -550,4 +550,10 @@ const char *mcs_command_to_string(MCSPacket *pkt)
     }
 
     return NULL;
+}
+
+bool mcs_is_answer_packet(const MCSPacket *pkt)
+{
+    return (pkt->type == MCS_TYPE_OK || pkt->type == MCS_TYPE_OK_DATA ||
+            pkt->type == MCS_TYPE_ERR);
 }
