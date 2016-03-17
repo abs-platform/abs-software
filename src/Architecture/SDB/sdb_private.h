@@ -12,7 +12,7 @@
 #define SDB_USB_ID              (SDB_MODULE_MAX + 1)
 
 typedef struct SDBModulePacket {
-    unsigned int id_origin;
+    unsigned int id_process;
     MCSPacket *pkt;
 } SDBModulePacket;
 

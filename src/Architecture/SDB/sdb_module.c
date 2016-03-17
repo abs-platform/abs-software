@@ -16,15 +16,45 @@ static SDBModule *get_info(void)
     return (SDBModule *)pthread_getspecific(sdb_module_info);
 }
 
-static void queue_push(MCSPacket *pkt, unsigned int id_origin)
+static SDBModule *get_info_id(unsigned int id)
+{
+    pthread_mutex_lock(&sdb_module_lock);
+    if(id >= sdb_module_last) {
+        pthread_mutex_unlock(&sdb_module_lock);
+        printf_dbg("Index not valid\n");
+        return NULL;
+    }
+    pthread_mutex_unlock(&sdb_module_lock);
+
+    return &sdb_module[id];
+}
+
+static SDBModulePacket *sdb_module_packet(MCSPacket *pkt, unsigned int id)
+{
+    SDBModulePacket *sdb_pkt = malloc(sizeof(*sdb_pkt));
+
+    sdb_pkt->id_process = id;
+    sdb_pkt->pkt = pkt;
+
+    return sdb_pkt;
+}
+
+static void sdb_module_packet_free(SDBModulePacket *sdb_pkt)
+{
+    mcs_free(sdb_pkt->pkt);
+    free(sdb_pkt);
+}
+
+/* Pending packets in the SDB are saved in a linked list. This makes insert
+ * and delete of cost O(1), and search of cost O(n). This is ok, because
+ * there should not be many pending packets.
+ */
+static void sdb_module_queue_push(MCSPacket *pkt, unsigned int id_origin)
 {
     SDBModule *mod = get_info();
     SDBModuleQueue *queue = malloc(sizeof(*queue));
-    SDBModulePacket *sdb_pkt = malloc(sizeof(*sdb_pkt));
 
-    sdb_pkt->id_origin = id_origin;
-    sdb_pkt->pkt = pkt;
-    queue->pkt = sdb_pkt;
+    queue->pkt = sdb_module_packet(pkt, id_origin);
     queue->next = NULL;
 
     if (mod->queue_first == NULL) {
@@ -36,7 +66,7 @@ static void queue_push(MCSPacket *pkt, unsigned int id_origin)
      mod->queue_last = queue;
 }
 
-SDBModulePacket *queue_get(MCSPacket *answer)
+static SDBModulePacket *sdb_module_queue_get(MCSPacket *answer)
 {
     SDBModule *mod = get_info();
     SDBModulePacket *res;
@@ -161,7 +191,7 @@ static void process_pkt_message(MCSPacket *pkt)
     }
 
     /* Finally, send */
-    queue_push(pkt, mod->id);
+    sdb_module_queue_push(pkt, mod->id);
     sdb_module_write_mcs_packet(pkt, dest_index);
 }
 
@@ -229,7 +259,7 @@ static void process_pkt_payload(MCSPacket *pkt)
                                 mcs_command_payload_list[pkt->cmd].cmd.name);
 
     /* TODO: Send */
-    queue_push(pkt, mod->id);
+    sdb_module_queue_push(pkt, mod->id);
     //usb_queue_push(pkt, my_id);
 }
 
@@ -250,7 +280,7 @@ static void process_pkt_sdb(void)
     }
 
     if (mcs_is_answer_packet(pkt)) {
-        pkt_origin = queue_get(pkt);
+        pkt_origin = sdb_module_queue_get(pkt);
         if (pkt_origin == NULL) {
             /* Sending an answer means closing a communication. Sending an
              * error would start an infinite chain of error messages.
@@ -258,13 +288,12 @@ static void process_pkt_sdb(void)
             printf_dbg("Unexpected answer\n");
         } else {
             mcs_write_command(pkt, mod->wfd);
-            mcs_free(pkt_origin->pkt);
-            free(pkt_origin);
+            sdb_module_packet_free(pkt_origin);
         }
 
         mcs_free(pkt);
     } else {
-        queue_push(pkt, id_origin);
+        sdb_module_queue_push(pkt, id_origin);
         mcs_write_command(pkt, mod->wfd);
     }
 }
@@ -282,16 +311,15 @@ static void process_pkt_socket(void)
     }
 
     if (mcs_is_answer_packet(pkt)) {
-        pkt_origin = queue_get(pkt);
+        pkt_origin = sdb_module_queue_get(pkt);
         if (pkt_origin == NULL) {
             printf_dbg("Unexpected answer\n");
             /* Sending an answer means closing a communication. Sending an
              * error would start an infinite chain of error messages.
              */
         } else {
-            sdb_module_write_mcs_packet(pkt, pkt_origin->id_origin);
-            mcs_free(pkt_origin->pkt);
-            free(pkt_origin);
+            sdb_module_write_mcs_packet(pkt, pkt_origin->id_process);
+            sdb_module_packet_free(pkt_origin);
         }
 
         mcs_free(pkt);
@@ -363,28 +391,25 @@ error_ret:
 int sdb_module_write_mcs_packet(const MCSPacket *pkt, unsigned int to)
 {
     SDBModule *mod = get_info();
+    SDBModule *mod_to = get_info_id(to);
     void *pos_pkt;
     void *pos;
 
-    pthread_mutex_lock(&sdb_module_lock);
-    if(to >= sdb_module_last) {
-        pthread_mutex_unlock(&sdb_module_lock);
-        printf_dbg("Index not valid\n");
+    if (mod_to == NULL) {
         return -1;
     }
-    pthread_mutex_unlock(&sdb_module_lock);
 
     if(sizeof(*pkt) + pkt->nargs + pkt->data_size > SDB_MODULE_DATA_SIZE) {
         printf_dbg("Data region is too small\n");
         return -1;
     }
 
-    pthread_mutex_lock(&sdb_module[to].lock);
-    while(sdb_module[to].data_valid) {
-        pthread_cond_wait(&sdb_module[to].cond_var, &sdb_module[to].lock);
+    pthread_mutex_lock(&mod_to->lock);
+    while(mod_to->data_valid) {
+        pthread_cond_wait(&mod_to->cond_var, &mod_to->lock);
     }
 
-    pos = sdb_module[to].data;
+    pos = mod_to->data;
 
     memcpy(pos, &mod->id, sizeof(mod->id));
     pos += sizeof(mod->id);
@@ -414,10 +439,10 @@ int sdb_module_write_mcs_packet(const MCSPacket *pkt, unsigned int to)
         ((MCSPacket *)pos_pkt)->data = pos;
     }
 
-    sdb_module[to].data_valid = true;
+    mod_to->data_valid = true;
 
-    pthread_cond_broadcast(&sdb_module[to].cond_var);
-    pthread_mutex_unlock(&sdb_module[to].lock);
+    pthread_cond_broadcast(&mod_to->cond_var);
+    pthread_mutex_unlock(&mod_to->lock);
 
     return 0;
 }
