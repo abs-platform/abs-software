@@ -11,15 +11,20 @@
 #define SDB_MODULE_MAX          20
 #define SDB_USB_ID              (SDB_MODULE_MAX + 1)
 
-typedef struct SDBModulePacket {
+typedef struct SDBPacket {
     unsigned int id_process;
     MCSPacket *pkt;
-} SDBModulePacket;
+} SDBPacket;
 
-typedef struct SDBModuleQueue {
-    SDBModulePacket *pkt;
-    struct SDBModuleQueue *next;
-} SDBModuleQueue;
+typedef struct SDBQueueElem {
+    SDBPacket *pkt;
+    struct SDBQueueElem *next;
+} SDBQueueElem;
+
+typedef struct SDBQueue {
+    SDBQueueElem *queue_first;
+    SDBQueueElem *queue_last;
+} SDBQueue;
 
 typedef struct SDBModule {
     unsigned int id;
@@ -37,8 +42,7 @@ typedef struct SDBModule {
 
     bool data_socket;
 
-    SDBModuleQueue *queue_first;
-    SDBModuleQueue *queue_last;
+    SDBQueue queue;
 } SDBModule;
 
 extern SDBModule sdb_module[SDB_MODULE_MAX];
@@ -60,4 +64,11 @@ void *sdb_director_thread();
 /* SDB observer section */
 void *sdb_observer_thread();
 void sdb_observer_wake_up(void);
+
+/* SDB queue section */
+SDBPacket *sdb_packet(MCSPacket *pkt, unsigned int id);
+void sdb_packet_free(SDBPacket *sdb_pkt);
+void sdb_queue_push(SDBQueue *queue, SDBPacket *sdb_pkt);
+SDBPacket *sdb_queue_get(SDBQueue *queue, MCSPacket *answer);
+
 #endif

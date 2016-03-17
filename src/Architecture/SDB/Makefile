@@ -1,5 +1,5 @@
 APPLICATION = sdb
-SOURCES = sdb.c sdb_director.c sdb_module.c sdb_observer.c
+SOURCES = sdb.c sdb_director.c sdb_module.c sdb_observer.c sdb_queue.c
 SUBDIRS = Test
 
 LOCAL_LDFLAGS = -lmcs -pthread -labs
@@ -32,4 +32,4 @@ $(SUBTEST): %.test:
 $(SUBCLEAN): %.clean:
 	$(MAKE) -C $* clean
 
-.PHONY: all clean test $(SUBDIRS) $(SUBCLEAN) $(SUBTEST) 
+.PHONY: all clean test $(SUBDIRS) $(SUBCLEAN) $(SUBTEST)

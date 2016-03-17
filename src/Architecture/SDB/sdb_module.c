@@ -29,77 +29,6 @@ static SDBModule *get_info_id(unsigned int id)
     return &sdb_module[id];
 }
 
-static SDBModulePacket *sdb_module_packet(MCSPacket *pkt, unsigned int id)
-{
-    SDBModulePacket *sdb_pkt = malloc(sizeof(*sdb_pkt));
-
-    sdb_pkt->id_process = id;
-    sdb_pkt->pkt = pkt;
-
-    return sdb_pkt;
-}
-
-static void sdb_module_packet_free(SDBModulePacket *sdb_pkt)
-{
-    mcs_free(sdb_pkt->pkt);
-    free(sdb_pkt);
-}
-
-/* Pending packets in the SDB are saved in a linked list. This makes insert
- * and delete of cost O(1), and search of cost O(n). This is ok, because
- * there should not be many pending packets.
- */
-static void sdb_module_queue_push(MCSPacket *pkt, unsigned int id_origin)
-{
-    SDBModule *mod = get_info();
-    SDBModuleQueue *queue = malloc(sizeof(*queue));
-
-    queue->pkt = sdb_module_packet(pkt, id_origin);
-    queue->next = NULL;
-
-    if (mod->queue_first == NULL) {
-        mod->queue_first = queue;
-    } else {
-        mod->queue_last->next = queue;
-    }
-
-     mod->queue_last = queue;
-}
-
-static SDBModulePacket *sdb_module_queue_get(MCSPacket *answer)
-{
-    SDBModule *mod = get_info();
-    SDBModulePacket *res;
-    SDBModuleQueue *queue_prev = NULL;
-    SDBModuleQueue *queue = mod->queue_first;
-
-    while (queue != NULL && queue->pkt->pkt->id != answer->id) {
-        queue_prev = queue;
-        queue = queue->next;
-    }
-
-    if (queue == NULL) {
-        return NULL;
-    }
-
-    if (queue_prev != NULL) {
-        queue_prev->next = queue->next;
-    } else {
-        /* queue was the first. Now the first is tne next */
-        mod->queue_first = queue->next;
-    }
-
-    if (queue->next == NULL) {
-        /* queue was the last. Now the last is queue_prev */
-        mod->queue_last = queue_prev;
-    }
-
-    res = queue->pkt;
-
-    free(queue);
-    return res;
-}
-
 static void process_pkt_message(MCSPacket *pkt)
 {
     SDBModule *mod = get_info();
@@ -191,7 +120,7 @@ static void process_pkt_message(MCSPacket *pkt)
     }
 
     /* Finally, send */
-    sdb_module_queue_push(pkt, mod->id);
+    sdb_queue_push(&mod->queue, sdb_packet(pkt, mod->id));
     sdb_module_write_mcs_packet(pkt, dest_index);
 }
 
@@ -259,7 +188,7 @@ static void process_pkt_payload(MCSPacket *pkt)
                                 mcs_command_payload_list[pkt->cmd].cmd.name);
 
     /* TODO: Send */
-    sdb_module_queue_push(pkt, mod->id);
+    sdb_queue_push(&mod->queue, sdb_packet(pkt, mod->id));
     //usb_queue_push(pkt, my_id);
 }
 
@@ -268,7 +197,7 @@ static void process_pkt_sdb(void)
 {
     unsigned int id_origin;
     MCSPacket *pkt;
-    SDBModulePacket *pkt_origin;
+    SDBPacket *pkt_origin;
     SDBModule *mod = get_info();
 
     id_origin = *((unsigned int *)mod->data);
@@ -280,7 +209,7 @@ static void process_pkt_sdb(void)
     }
 
     if (mcs_is_answer_packet(pkt)) {
-        pkt_origin = sdb_module_queue_get(pkt);
+        pkt_origin = sdb_queue_get(&mod->queue, pkt);
         if (pkt_origin == NULL) {
             /* Sending an answer means closing a communication. Sending an
              * error would start an infinite chain of error messages.
@@ -288,12 +217,12 @@ static void process_pkt_sdb(void)
             printf_dbg("Unexpected answer\n");
         } else {
             mcs_write_command(pkt, mod->wfd);
-            sdb_module_packet_free(pkt_origin);
+            sdb_packet_free(pkt_origin);
         }
 
         mcs_free(pkt);
     } else {
-        sdb_module_queue_push(pkt, id_origin);
+        sdb_queue_push(&mod->queue, sdb_packet(pkt, id_origin));
         mcs_write_command(pkt, mod->wfd);
     }
 }
@@ -301,7 +230,7 @@ static void process_pkt_sdb(void)
 static void process_pkt_socket(void)
 {
     MCSPacket *pkt;
-    SDBModulePacket *pkt_origin;
+    SDBPacket *pkt_origin;
     SDBModule *mod = get_info();
 
     pkt = mcs_read_command(mod->rfd, mod->wfd);
@@ -311,7 +240,7 @@ static void process_pkt_socket(void)
     }
 
     if (mcs_is_answer_packet(pkt)) {
-        pkt_origin = sdb_module_queue_get(pkt);
+        pkt_origin = sdb_queue_get(&mod->queue, pkt);
         if (pkt_origin == NULL) {
             printf_dbg("Unexpected answer\n");
             /* Sending an answer means closing a communication. Sending an
@@ -319,7 +248,7 @@ static void process_pkt_socket(void)
              */
         } else {
             sdb_module_write_mcs_packet(pkt, pkt_origin->id_process);
-            sdb_module_packet_free(pkt_origin);
+            sdb_packet_free(pkt_origin);
         }
 
         mcs_free(pkt);
