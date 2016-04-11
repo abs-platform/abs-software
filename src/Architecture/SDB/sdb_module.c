@@ -187,9 +187,8 @@ static void process_pkt_payload(MCSPacket *pkt)
     printf("Recived the payload request %s\n",
                                 mcs_command_payload_list[pkt->cmd].cmd.name);
 
-    /* TODO: Send */
     sdb_queue_push_nolock(&mod->queue, sdb_packet(pkt, mod->id));
-    //usb_queue_push(pkt, my_id);
+    //sdb_queue_push(&sdb_usb_queue_send, sdb_packet_prio(pkt, mod->id));
 }
 
 

@@ -7,9 +7,12 @@
 #include <mcs.h>
 
 #define SDB_MODULE_DATA_SIZE    1024
+/* TODO: check the USB limit, and join with the module limit */
+#define SDB_USB_DATA_SIZE       256
 
 #define SDB_MODULE_MAX          20
 #define SDB_USB_ID              (SDB_MODULE_MAX + 1)
+#define SDB_USB_DEVICE          "/dev/usb_accessory"
 
 typedef struct SDBPacket {
     unsigned int id_process;
@@ -49,11 +52,18 @@ typedef struct SDBModule {
     SDBQueue queue;
 } SDBModule;
 
+typedef enum SDBUSBResponse{
+    SDB_USB_OK,
+    SDB_USB_OK_DATA,
+    SDB_USB_ERROR
+} SDBUSBResponse;
+
 extern SDBModule sdb_module[SDB_MODULE_MAX];
 extern unsigned int sdb_module_last;
 extern pthread_mutex_t sdb_module_lock;
 extern pthread_key_t sdb_module_info;
 extern int sdb_observer_fd;
+extern SDBQueue sdb_usb_queue_send;
 
 /* SDB module section */
 void sdb_module_init(int rfd, int wfd);
@@ -68,6 +78,9 @@ void *sdb_director_thread();
 /* SDB observer section */
 void *sdb_observer_thread();
 void sdb_observer_wake_up(void);
+
+/* SDB USB section */
+int sdb_usb_init(void);
 
 /* SDB queue section */
 SDBPacket *sdb_packet(MCSPacket *pkt, unsigned int id);

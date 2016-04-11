@@ -25,6 +25,11 @@ int main()
     sigaddset(&set, SIGSEGV);
     pthread_sigmask(SIG_BLOCK, &set, NULL);
 
+    /* Initialize components */
+    /*if (sdb_usb_init() != 0) {
+        goto error;
+    }*/
+
     /* Start director thread */
     if(pthread_create(&director_id, NULL, sdb_director_thread, NULL) < 0) {
         printf_dbg("Error creating thread\n");
