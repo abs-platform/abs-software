@@ -120,7 +120,7 @@ static void process_pkt_message(MCSPacket *pkt)
     }
 
     /* Finally, send */
-    sdb_queue_push(&mod->queue, sdb_packet(pkt, mod->id));
+    sdb_queue_push_nolock(&mod->queue, sdb_packet(pkt, mod->id));
     sdb_module_write_mcs_packet(pkt, dest_index);
 }
 
@@ -188,7 +188,7 @@ static void process_pkt_payload(MCSPacket *pkt)
                                 mcs_command_payload_list[pkt->cmd].cmd.name);
 
     /* TODO: Send */
-    sdb_queue_push(&mod->queue, sdb_packet(pkt, mod->id));
+    sdb_queue_push_nolock(&mod->queue, sdb_packet(pkt, mod->id));
     //usb_queue_push(pkt, my_id);
 }
 
@@ -209,7 +209,7 @@ static void process_pkt_sdb(void)
     }
 
     if (mcs_is_answer_packet(pkt)) {
-        pkt_origin = sdb_queue_get(&mod->queue, pkt);
+        pkt_origin = sdb_queue_get_nolock(&mod->queue, pkt);
         if (pkt_origin == NULL) {
             /* Sending an answer means closing a communication. Sending an
              * error would start an infinite chain of error messages.
@@ -222,7 +222,7 @@ static void process_pkt_sdb(void)
 
         mcs_free(pkt);
     } else {
-        sdb_queue_push(&mod->queue, sdb_packet(pkt, id_origin));
+        sdb_queue_push_nolock(&mod->queue, sdb_packet(pkt, id_origin));
         mcs_write_command(pkt, mod->wfd);
     }
 }
@@ -240,7 +240,7 @@ static void process_pkt_socket(void)
     }
 
     if (mcs_is_answer_packet(pkt)) {
-        pkt_origin = sdb_queue_get(&mod->queue, pkt);
+        pkt_origin = sdb_queue_get_nolock(&mod->queue, pkt);
         if (pkt_origin == NULL) {
             printf_dbg("Unexpected answer\n");
             /* Sending an answer means closing a communication. Sending an
@@ -452,6 +452,8 @@ void *sdb_module_thread(void *arg)
     pthread_setspecific(sdb_module_info, mod);
     pthread_mutex_init(&mod->lock, NULL);
     pthread_cond_init(&mod->cond_var, NULL);
+
+    sdb_queue_init(&mod->queue);
 
     pthread_mutex_lock(&mod->lock);
 

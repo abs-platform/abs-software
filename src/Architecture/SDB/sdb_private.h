@@ -13,17 +13,21 @@
 
 typedef struct SDBPacket {
     unsigned int id_process;
+    int priority;
     MCSPacket *pkt;
 } SDBPacket;
 
 typedef struct SDBQueueElem {
     SDBPacket *pkt;
+    struct SDBQueueElem *prev;
     struct SDBQueueElem *next;
 } SDBQueueElem;
 
 typedef struct SDBQueue {
     SDBQueueElem *queue_first;
     SDBQueueElem *queue_last;
+    pthread_mutex_t queue_lock;
+    pthread_cond_t queue_var;
 } SDBQueue;
 
 typedef struct SDBModule {
@@ -67,8 +71,13 @@ void sdb_observer_wake_up(void);
 
 /* SDB queue section */
 SDBPacket *sdb_packet(MCSPacket *pkt, unsigned int id);
+SDBPacket *sdb_packet_prio(MCSPacket *pkt, unsigned int id);
 void sdb_packet_free(SDBPacket *sdb_pkt);
 void sdb_queue_push(SDBQueue *queue, SDBPacket *sdb_pkt);
+void sdb_queue_push_nolock(SDBQueue *queue, SDBPacket *sdb_pkt);
 SDBPacket *sdb_queue_get(SDBQueue *queue, MCSPacket *answer);
+SDBPacket *sdb_queue_get_nolock(SDBQueue *queue, MCSPacket *answer);
+SDBPacket *sdb_queue_pop_block(SDBQueue *queue);
+void sdb_queue_init(SDBQueue *queue);
 
 #endif
