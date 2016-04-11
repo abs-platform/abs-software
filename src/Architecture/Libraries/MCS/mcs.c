@@ -420,12 +420,12 @@ int mcs_write_command_and_free(MCSPacket *pkt, int fd)
     return ret;
 }
 
-MCSPacket *mcs_ok_packet_data(const MCSPacket *from, void *data, size_t size)
+MCSPacket *mcs_ok_packet_data_id(unsigned int id, void *data, size_t size)
 {
     MCSPacket *pkt;
 
     pkt = abs_malloc0(sizeof(*pkt));
-    pkt->id = from->id;
+    pkt->id = id;
     pkt->type = MCS_TYPE_OK_DATA;
     pkt->data_size = size;
     if(size != 0) {
@@ -435,18 +435,18 @@ MCSPacket *mcs_ok_packet_data(const MCSPacket *from, void *data, size_t size)
     return pkt;
 }
 
-MCSPacket *mcs_ok_packet(const MCSPacket *from)
+MCSPacket *mcs_ok_packet_id(unsigned int id)
 {
     MCSPacket *pkt;
 
     pkt = abs_malloc0(sizeof(*pkt));
-    pkt->id = from->id;
+    pkt->id = id;
     pkt->type = MCS_TYPE_OK;
 
     return pkt;
 }
 
-MCSPacket *mcs_err_packet(const MCSPacket *from, int err_code)
+MCSPacket *mcs_err_packet_id(unsigned int id, int err_code)
 {
     MCSPacket *pkt;
     int *err_code_mem;
@@ -455,7 +455,7 @@ MCSPacket *mcs_err_packet(const MCSPacket *from, int err_code)
     *err_code_mem = err_code;
 
     pkt = abs_malloc0(sizeof(*pkt));
-    pkt->id = from->id;
+    pkt->id = id;
     pkt->type = MCS_TYPE_ERR;
     pkt->data_size = sizeof(int);
     pkt->data = (unsigned char *)err_code_mem;
@@ -469,9 +469,15 @@ MCSPacket *mcs_create_packet(MCSCommand cmd, unsigned short nargs,
     MCSPacket *pkt;
 
     pkt = abs_malloc0(sizeof(*pkt));
-    pkt->id = generate_id();
     pkt->type = (cmd & 0xF0000) >> 16;
     pkt->cmd = cmd & 0xFFFF;
+
+    if (pkt->type == MCS_TYPE_PAYLOAD) {
+        pkt->id = (unsigned char)(generate_id()) & 0x7F;
+    } else {
+        pkt->id = generate_id();
+    }
+
     pkt->nargs = nargs;
     if(nargs != 0) {
         pkt->args = abs_malloccpy(args, nargs);
