@@ -178,24 +178,40 @@ USBPacket execute_packet(USBPacket *packet)
                         mySerial[num].print("\n");      
                         response = usb_ok_packet();
                         break;
-                     case INIT_SPI:
-                         SPI.begin();
-                         pinMode(10, OUTPUT);
-                         break;
-                     case READ_SPI:
-                         digitalWrite(10, LOW);
-                         data = (char *) SPI.transfer(0x00);
-                         response = usb_ok_data_packet(NULL, data, 1);
-                         digitalWrite(10, HIGH);
-                         break;
-                     case WRITE_SPI:
-                         data = packet->data;
-                         for(j = 0; j < packet->data_size; j++) {
+                    case INIT_SPI:
+                        SPI.begin();
+                        pinMode(10, OUTPUT);
+                        break;
+                    case READ_SPI:
+                        digitalWrite(10, LOW);
+                        data = (char *) SPI.transfer(0x00);
+                        response = usb_ok_data_packet(NULL, data, 1);
+                        digitalWrite(10, HIGH);
+                        break;
+                    case WRITE_SPI:
+                        data = packet->data;
+                        for(j = 0; j < packet->data_size; j++) {
                              digitalWrite(10, LOW);
                              SPI.transfer(data[j]);
                              digitalWrite(10, HIGH);
-                         }      
-                         break;
+                        }      
+                        break;
+                    case CONFIGURE:
+                        comms.configure();
+                        break;
+                    case TRANSMIT:
+                        data = packet->data;
+                        data_size = packet->data_size;
+                        comms.tx(data);
+                        break;
+                    case RECEIVE:
+                        response=comms.rx();
+                        break;
+                    case CHANGE_X:
+                        parameter = packet->cmd_arg1;
+                        value = packet->cmd_arg2;
+                        comms.change_x(parameter,value);
+                        break;
                 }
             } else {
                 response = usb_error_packet(1);

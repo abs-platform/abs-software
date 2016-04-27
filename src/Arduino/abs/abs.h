@@ -11,7 +11,8 @@
 #define MAX_SERIAL 2
 #define MAX_EVENTS 10
 #define MAX_PACKET_SIZE 500
-#define SD_CS 3
+#define SD_CS 52
+#define COMMS_CS 49
 #define TIMER_INTERVAL 500000
 #define SERIAL_BITRATE 115200
 const int bitrate[] = {300, 1200, 2400, 4800, 9600, 14400, 19200, 28800, 38400, 57600,  115200};
@@ -60,6 +61,10 @@ typedef enum {
     INIT_CAN,
     READ_CAN,
     WRITE_CAN
+    CONFIGURE,
+    TRANSMIT,
+    RECEIVE,
+    CHANGE_X
 } ParametersComms;
 
 typedef enum {

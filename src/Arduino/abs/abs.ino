@@ -4,7 +4,9 @@
 #include <SoftwareSerial.h>
 #include <SD.h>
 #include <SPI.h>
-#include <Servo.h> 
+#include <Servo.h>
+#include <comms.h>
+#include <hdlc.h>
 #include "abs.h"
 
 Servo myServo[MAX_SERVO];
