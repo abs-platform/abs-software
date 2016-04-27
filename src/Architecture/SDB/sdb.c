@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <signal.h>
 #include <abs.h>
+#include <mcs.h>
 #include "sdb_private.h"
 
 int main()

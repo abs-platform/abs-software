@@ -32,6 +32,11 @@ bool mcs_cmp(MCSPacket *pkt_a, MCSPacket *pkt_b)
         return false;
     }
 
+    if(pkt_a->id != pkt_b->id) {
+        abs_test_printf("IDs are different. a: %u, b: %u\n", pkt_a->id, pkt_b->id);
+        return false;
+    }
+
     if(pkt_a->type != pkt_b->type) {
         abs_test_printf("Types are different. a: %d, b: %d\n", pkt_a->type, pkt_b->type);
         return false;
@@ -81,6 +86,12 @@ bool mcs_cmp(MCSPacket *pkt_a, MCSPacket *pkt_b)
     }
 
     return true;
+}
+
+MCSPacket *gen_dummy_id(unsigned int id) {
+    MCSPacket *pkt = abs_malloc0(sizeof(*pkt));
+    pkt->id = id;
+    return pkt;
 }
 
 void run_test(enum MCSType type)
@@ -175,13 +186,16 @@ void run_test(enum MCSType type)
 void run_test_err(void)
 {
     MCSPacket *pkt_wr, *pkt_rd;
+    MCSPacket *pkt_dummy;
     bool error = false;
 
     start_test();
 
     abs_test_printf("Testing command ERR\n");
 
-    pkt_wr = mcs_err_packet(EUNDEF);
+    pkt_dummy = gen_dummy_id(1);
+    pkt_wr = mcs_err_packet(pkt_dummy, EUNDEF);
+    mcs_free(pkt_dummy);
 
     if(pkt_wr != NULL) {
         if(mcs_write_command_and_free(pkt_wr, pipe_fd[1]) < 0) {
@@ -208,13 +222,16 @@ void run_test_err(void)
 void run_test_ok(void)
 {
     MCSPacket *pkt_wr, *pkt_rd;
+    MCSPacket *pkt_dummy;
     bool error = false;
 
     start_test();
 
     abs_test_printf("Testing command OK\n");
 
-    pkt_wr = mcs_ok_packet();
+    pkt_dummy = gen_dummy_id(1);
+    pkt_wr = mcs_ok_packet(pkt_dummy);
+    mcs_free(pkt_dummy);
 
     if(pkt_wr != NULL) {
         if(mcs_write_command_and_free(pkt_wr, pipe_fd[1]) < 0) {
@@ -241,6 +258,7 @@ void run_test_ok(void)
 void run_test_ok_data(void)
 {
     MCSPacket *pkt_wr, *pkt_rd;
+    MCSPacket *pkt_dummy;
     unsigned char data[] = "Hello World!";
     bool error = false;
 
@@ -248,7 +266,9 @@ void run_test_ok_data(void)
 
     abs_test_printf("Testing command OK_DATA\n");
 
-    pkt_wr = mcs_ok_packet_data(data, strlen((char *)data));
+    pkt_dummy = gen_dummy_id(1);
+    pkt_wr = mcs_ok_packet_data(pkt_dummy, data, strlen((char *)data));
+    mcs_free(pkt_dummy);
 
     if(pkt_wr != NULL) {
         if(mcs_write_command_and_free(pkt_wr, pipe_fd[1]) < 0) {
