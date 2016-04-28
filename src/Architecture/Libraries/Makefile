@@ -1,4 +1,4 @@
-SUBDIRS = ABS MCS Test
+SUBDIRS = ABS MCS Test SDB
 
 SUBTEST = $(addsuffix .test,$(SUBDIRS))
 SUBCLEAN = $(addsuffix .clean,$(SUBDIRS))
@@ -18,4 +18,4 @@ $(SUBTEST): %.test:
 $(SUBCLEAN): %.clean:
 	$(MAKE) -C $* clean
 
-.PHONY: all clean test $(SUBDIRS) $(SUBCLEAN) $(SUBTEST) 
+.PHONY: all clean test $(SUBDIRS) $(SUBCLEAN) $(SUBTEST)
