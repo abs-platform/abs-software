@@ -51,7 +51,7 @@ function test_summary_rec() {
     for file in "$1"/*; do
         if [ -d "$file" ]; then
             test_summary_rec "$file"
-        elif [ ${file: -9} == ".abs.test" ]; then
+        elif [ "${file: -9}" = ".abs.test" ]; then
             # Warning! Space between : and -9 is necessary
             process_test_result "$file"
         fi
@@ -85,13 +85,17 @@ fi
 
 total=$(($pass + $xfail + $skip + $fail))
 if [ ! $total -eq 0 ]; then
-    echo "$separator"
-    echo "Test execution result for $total tests run:"
-    echo "Passed tests: $pass"
-    echo "Failed tests: $fail"
-    echo "Failed tests (expected): $xfail"
-    echo "Skipped tests: $skip"
-    echo ""
-    echo -ne "$test_log_text"
-    echo "$separator"
+    echo "$separator" >> $test_file
+    echo "Test execution result for $total tests run:" >> $test_file
+    echo "Passed tests: $pass" >> $test_file
+    echo "Failed tests: $fail" >> $test_file
+    echo "Failed tests (expected): $xfail" >> $test_file
+    echo "Skipped tests: $skip" >> $test_file
+    echo "" >> $test_file
+    echo -ne "$test_log_text" >> $test_file
+    echo "$separator" >> $test_file
 fi
+
+cat $test_file
+
+exit 0
