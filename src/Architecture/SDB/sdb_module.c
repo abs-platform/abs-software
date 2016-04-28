@@ -207,9 +207,9 @@ static void process_pkt_sdb(void)
         return;
     }
 
-    if (mcs_is_answer_packet(pkt)) {
+    if(mcs_is_answer_packet(pkt)) {
         pkt_origin = sdb_queue_get_nolock(&mod->queue, pkt);
-        if (pkt_origin == NULL) {
+        if(pkt_origin == NULL) {
             /* Sending an answer means closing a communication. Sending an
              * error would start an infinite chain of error messages.
              */
@@ -238,9 +238,9 @@ static void process_pkt_socket(void)
         return;
     }
 
-    if (mcs_is_answer_packet(pkt)) {
+    if(mcs_is_answer_packet(pkt)) {
         pkt_origin = sdb_queue_get_nolock(&mod->queue, pkt);
-        if (pkt_origin == NULL) {
+        if(pkt_origin == NULL) {
             printf_dbg("Unexpected answer\n");
             /* Sending an answer means closing a communication. Sending an
              * error would start an infinite chain of error messages.
@@ -323,7 +323,7 @@ int sdb_module_write_mcs_packet(const MCSPacket *pkt, unsigned int to)
     void *pos_pkt;
     void *pos;
 
-    if (mod_to == NULL) {
+    if(mod_to == NULL) {
         return -1;
     }
 
@@ -334,6 +334,10 @@ int sdb_module_write_mcs_packet(const MCSPacket *pkt, unsigned int to)
 
     pthread_mutex_lock(&mod_to->lock);
     while(mod_to->data_valid) {
+        if(mod->id == mod_to->id) {
+            printf_dbg("Deadlock detected\n");
+            return -1;
+        }
         pthread_cond_wait(&mod_to->cond_var, &mod_to->lock);
     }
 
@@ -436,6 +440,7 @@ void *sdb_module_thread(void *arg)
     int i;
     size_t text_size;
     char *group;
+    pthread_mutexattr_t lock_attr;
 
     my_id = *((unsigned int *)arg);
     mod = &sdb_module[my_id];
@@ -449,8 +454,11 @@ void *sdb_module_thread(void *arg)
     printf_dbg("Thread %d has been created! Welcome on board!\n", my_id);
 
     pthread_setspecific(sdb_module_info, mod);
-    pthread_mutex_init(&mod->lock, NULL);
     pthread_cond_init(&mod->cond_var, NULL);
+
+    /* Might be interesting to send messages to self */
+    pthread_mutexattr_settype(&lock_attr, PTHREAD_MUTEX_RECURSIVE);
+    pthread_mutex_init(&mod->lock, &lock_attr);
 
     sdb_queue_init(&mod->queue);
 
@@ -515,15 +523,14 @@ void *sdb_module_thread(void *arg)
     /* Mutex is always locked when not waiting to cond variable. */
     pthread_mutex_lock(&mod->lock);
     while(1) {
-        pthread_cond_wait(&mod->cond_var, &mod->lock);
-
-        printf_dbg("Module %s has work to do\n", mod->name);
-
         if(mod->data_valid) {
             /* Socket is full duplex, memory region not */
             process_pkt_sdb();
         } else if(mod->data_socket) {
             process_pkt_socket();
+        } else {
+            pthread_cond_wait(&mod->cond_var, &mod->lock);
+            printf_dbg("Module %s has work to do\n", mod->name);
         }
     }
 
