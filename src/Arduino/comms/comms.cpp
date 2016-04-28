@@ -16,6 +16,11 @@
 
 const int chip_select_pin = 49;
 
+/*The next variables save the changes on the default ones*/
+int frequency;
+int bitrate;
+String modulationValue; 
+
 /*Setting up the transceiver*/
 void configure() {
 pinMode(chip_select_pin, OUTPUT);
@@ -69,16 +74,11 @@ pinMode(chip_select_pin, OUTPUT);
 void tx(char *data,int data_size){
     write_register(PWRMODE, 0x60);
     delay (3);
-    uint8_t freq0;
-    uint32_t freq = FCARRIER/FXTAL*2^24 + 1/2;
-    freq0 = freq >> 24;
-    write_register(FREQ3, freq0);
-    freq0 = freq >> 16;
-    write_register(FREQ2, freq0);
-    freq0 = freq >> 8;
-    write_register(FREQ1, freq0);
-    freq0 = freq;
-    write_register(FREQ0, freq0);
+    if(frequency == NULL){
+        configure_FREQ(FCARRIER);
+    }else{
+        configure_FREQ(frequency);
+    }
 
     /*LACKS ENCODING*/
 
@@ -95,18 +95,11 @@ void tx(char *data,int data_size){
 char *rx(){  
     write_register(PWRMODE, 0x60);
     delay (3);
-    int fcarrier=433;
-    int fxtal=16.3;
-    uint8_t freq0;
-    uint32_t freq = fcarrier/fxtal*2^24 + 1/2;
-    freq0 = freq >> 24;
-    write_register(FREQ3, freq0);
-    freq0 = freq >> 16;
-    write_register(FREQ2, freq0);
-    freq0 = freq >> 8;
-    write_register(FREQ1, freq0);
-    freq0 = freq;
-    write_register(FREQ0, freq0);
+    if(frequency == NULL){
+        configure_FREQ(FCARRIER);
+    }else{
+        configure_FREQ(frequency);
+	}
  
     /*LACKS ENCODING*/
 
@@ -120,7 +113,7 @@ char *rx(){
     return data;
   }
 
-/*It has to be especified the value of each case when the protocol
+/*It has to be specified the value of each case when the protocol
   would be written*/
 void change_x(int parameter, int value) {
     switch(parameter) {
