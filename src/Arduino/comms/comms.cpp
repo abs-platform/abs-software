@@ -117,31 +117,56 @@ char *rx(){
   would be written*/
 void change_x(int parameter, int value) {
     switch(parameter) {
-          case FREQUENCY:
-              uint8_t freq0;
-              uint32_t freq = value/FXTAL*2^24 + 1/2;
-              freq0 = freq >> 24;
-              write_register(FREQ3, freq0);
-              freq0 = freq >> 16;
-              write_register(FREQ2, freq0);
-              freq0 = freq >> 8;
-              write_register(FREQ1, freq0);
-              freq0 = freq;
-              write_register(FREQ0, freq0);
-              break;
-          case BITRATE:
-              int fdev=H/2*value;
-              uint8_t fsk0;
-              uint32_t fsk = fdev/FXTAL*2^24 + 1/2;
-              fsk0 = fsk >> 16;
-              write_register(FSKDEV2, fsk0);
-              fsk0 = fsk >> 8;
-              write_register(FSKDEV1, fsk0);
-              fsk0 = fsk;
-             write_register(FSKDEV0, fsk0);
-             break;
-      }
-  }
+        case FREQUENCY:
+			/*We expect the value to be 433 or 915*/
+            configure_FREQ(value*10^6);
+            int bandsel;
+            if(value == 433){
+                bandsel = 1;
+            }else{
+                bandsel = 0;
+			}
+            configure_PLLLOOP(bandsel);
+            frequency = value;
+            break;
+			
+        case BITRATE
+            uint32_t tmgcorrfrac = read_register(TMGCORRFRAC);    
+            configure_FSKDEV(value);
+            configure_TXRATE(value);
+            configure_CICDEC(value); 
+            if(modulationValue == NULL){
+				uint32_t fskmul = configure_FSKMUL(value,tmgcorrfrac, MODDefault);
+			} else {
+				uint32_t fskmul = configure_FSKMUL(value,tmgcorrfrac, modulationValue);
+			}
+            uint32_t datarate = configure_DATARATE(value);
+            configure_TMGGAIN(fskmul, datarate, tmgcorrfrac)
+            configure_AGCATTACK(value); 
+            configure_AGCDECAY(value); 
+            bitrate=value;
+            break;
+  
+        case MODULATION:
+            uint32_t tmgcorrfrac = read_register(TMGCORRFRAC);
+            configure_MODULATION(value);
+            uint32_t fskmul = configure_FSKMUL(bitrate,tmgcorrfrac, value);
+            uint32_t datarate = configure_DATARATE(bitrate);
+            configure_TMGGAIN(fskmul, datarate, tmgcorrfrac);
+            break;
+			
+        case TMRECOV:
+            if(modulationValue==NULL){
+                modulation = MODDefault;
+            }else{
+                modulation=modulationValue;
+            }
+            uint32_t fskmul = configure_FSKMUL(bitrate,value, modulationValue);
+            uint32_t datarate = configure_DATARATE(value,bitrate);
+            configure_TMGGAIN(fskmul, datarate, TMGCORRFRAC);
+            break;
+    }
+}
 
 /*Read a register*/
 unsigned int read_register(byte this_register) {
