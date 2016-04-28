@@ -487,8 +487,8 @@ void *sdb_module_thread(void *arg)
     strncpy((char *)mod->name, (char *)pkt->data, text_size - 1);
 
     for(i = 0; i < SDB_GROUP_MAX; ++i) {
-        if(strcmp(group, group_conversion[i].str) == 0) {
-            mod->group = group_conversion[i].val;
+        if(strcmp(group, sdb_group_conversion[i].str) == 0) {
+            mod->group = sdb_group_conversion[i].val;
             break;
         }
     }

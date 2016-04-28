@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 #include <pthread.h>
-#include <sdb.h>
+#include <sdb_group.h>
 #include <mcs.h>
 
 #define SDB_MODULE_DATA_SIZE    1024

@@ -2,7 +2,7 @@
 #define __MCS_H
 
 #include <stdbool.h>
-#include <sdb.h>
+#include <sdb_group.h>
 
 #define MCS_READ_TIMEOUT_US 1000
 #define MCS_COMMAND_TYPES 3
