@@ -80,6 +80,9 @@
 #define FIF       1000000
 #define FXTAL     16300000
 #define H         0.5
+#define TMGCORRFRAC     32
+#define MODdefault      "FSK"
+#define BANDSEL         1
 
 
 #endif
