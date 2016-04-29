@@ -11,11 +11,6 @@ unsigned int sdb_module_last = 0;
 pthread_mutex_t sdb_module_lock;
 pthread_key_t sdb_module_info;
 
-static SDBModule *get_info(void)
-{
-    return (SDBModule *)pthread_getspecific(sdb_module_info);
-}
-
 static SDBModule *get_info_id(unsigned int id)
 {
     pthread_mutex_lock(&sdb_module_lock);
@@ -32,6 +27,7 @@ static SDBModule *get_info_id(unsigned int id)
 static void process_pkt_message(MCSPacket *pkt)
 {
     SDBModule *mod = get_info();
+    MCSPacket *pkt_res;
     unsigned int i;
     size_t list_num;
     unsigned int dest_index;
@@ -40,6 +36,7 @@ static void process_pkt_message(MCSPacket *pkt)
 
     if(pkt->cmd >= mcs_command_list_size[MCS_TYPE_MESSAGE]) {
         mcs_write_command_and_free(mcs_err_packet(pkt, ECMDFAULT), mod->wfd);
+        sdb_qos_register_packet_scrap(pkt);
         return;
     }
 
@@ -55,6 +52,7 @@ static void process_pkt_message(MCSPacket *pkt)
     if(groups == NULL) {
         printf_dbg("Origin groups should not be null\n");
         mcs_write_command_and_free(mcs_err_packet(pkt, EUNDEF), mod->wfd);
+        sdb_qos_register_packet_scrap(pkt);
         return;
     }
 #endif
@@ -71,6 +69,7 @@ static void process_pkt_message(MCSPacket *pkt)
         if(i == list_num) {
             printf_dbg("Not enough privileges\n");
             mcs_write_command_and_free(mcs_err_packet(pkt, EPERM), mod->wfd);
+            sdb_qos_register_packet_scrap(pkt);
             return;
         }
     }
@@ -78,7 +77,35 @@ static void process_pkt_message(MCSPacket *pkt)
     /* Get destination */
     dest_name = mcs_command_message_list[pkt->cmd].destination;
     if(dest_name == NULL) {
-        /* TODO */
+        /* Packet is for the SDB */
+        switch (pkt->cmd) {
+            case MCS_MESSAGE_SDB_QOS_START:
+                sdb_qos_start();
+                mcs_write_command_and_free(mcs_ok_packet(pkt), mod->wfd);
+                break;
+            case MCS_MESSAGE_SDB_QOS_DUMP:
+                if (sdb_qos_dump_module(pkt, &pkt_res) == 0) {
+                    mcs_write_command_and_free(pkt_res, mod->wfd);
+                } else {
+                    mcs_write_command_and_free(mcs_err_packet(pkt, EUNDEF),
+                                                mod->wfd);
+                }
+                break;
+            case MCS_MESSAGE_SDB_QOS_STOP:
+                if (sdb_qos_dump_module(pkt, &pkt_res) == 0) {
+                    sdb_qos_stop();
+                    mcs_write_command_and_free(pkt_res, mod->wfd);
+                } else {
+                    sdb_qos_stop();
+                    mcs_write_command_and_free(mcs_err_packet(pkt, EUNDEF),
+                                                mod->wfd);
+                }
+            default:
+                mcs_write_command_and_free(mcs_err_packet(pkt, EBADFORMAT),
+                                            mod->wfd);
+                sdb_qos_register_packet_scrap(pkt);
+                break;
+        }
         return;
     } else if(dest_name[0] == '@') {
         dest_name = pkt->dest;
@@ -97,6 +124,7 @@ static void process_pkt_message(MCSPacket *pkt)
     if(i == list_num) {
         printf_dbg("Non valid destination\n");
         mcs_write_command_and_free(mcs_err_packet(pkt, EBADMODID), mod->wfd);
+        sdb_qos_register_packet_scrap(pkt);
         return;
     }
 
@@ -115,6 +143,7 @@ static void process_pkt_message(MCSPacket *pkt)
         if(i == list_num) {
             printf_dbg("Not enough privileges\n");
             mcs_write_command_and_free(mcs_err_packet(pkt, EPERM), mod->wfd);
+            sdb_qos_register_packet_scrap(pkt);
             return;
         }
     }
@@ -135,6 +164,7 @@ static void process_pkt_state(MCSPacket *pkt)
 
     if(pkt->cmd >= mcs_command_list_size[MCS_TYPE_STATE]) {
         mcs_write_command_and_free(mcs_err_packet(pkt, ECMDFAULT), mod->wfd);
+        sdb_qos_register_packet_scrap(pkt);
         return;
     }
 
@@ -153,6 +183,7 @@ static void process_pkt_state(MCSPacket *pkt)
                     printf_dbg("Not enough privileges\n");
                     mcs_write_command_and_free(mcs_err_packet(pkt, EPERM),
                                                 mod->wfd);
+                    sdb_qos_register_packet_scrap(pkt);
                     return;
                 }
                 break;
@@ -162,11 +193,13 @@ static void process_pkt_state(MCSPacket *pkt)
 
     data_size = mcs_command_state_list[pkt->cmd].cmd.response_size;
     data = mcs_command_state_list[pkt->cmd].request(pkt);
+    sdb_qos_register_packet_ready(pkt);
+
+    /* Send response */
     if(data_size == -1) {
         mcs_write_command_and_free(mcs_ok_packet_data(pkt,
                     data, strlen((char *)data) + 1), mod->wfd);
     } else {
-        /* Send response */
         mcs_write_command_and_free(mcs_ok_packet_data(pkt, data, data_size),
                                     mod->wfd);
     }
@@ -179,6 +212,7 @@ static void process_pkt_payload(MCSPacket *pkt)
 
     if(pkt->cmd >= mcs_command_list_size[MCS_TYPE_PAYLOAD]) {
         mcs_write_command_and_free(mcs_err_packet(pkt, ECMDFAULT), mod->wfd);
+        sdb_qos_register_packet_scrap(pkt);
         return;
     }
 
@@ -190,7 +224,6 @@ static void process_pkt_payload(MCSPacket *pkt)
     sdb_queue_push_nolock(&mod->queue, sdb_packet(pkt, mod->id));
     //sdb_queue_push(&sdb_usb_queue_send, sdb_packet_prio(pkt, mod->id));
 }
-
 
 static void process_pkt_sdb(void)
 {
@@ -210,12 +243,16 @@ static void process_pkt_sdb(void)
     if(mcs_is_answer_packet(pkt)) {
         pkt_origin = sdb_queue_get_nolock(&mod->queue, pkt);
         if(pkt_origin == NULL) {
+            printf_dbg("Unexpected answer\n");
+            sdb_qos_register_packet_scrap(pkt);
             /* Sending an answer means closing a communication. Sending an
              * error would start an infinite chain of error messages.
              */
-            printf_dbg("Unexpected answer\n");
         } else {
+            sdb_qos_register_packet_ready(pkt);
             mcs_write_command(pkt, mod->wfd);
+            sdb_qos_register_packet_out(pkt);
+            sdb_qos_register_packet_ready(pkt_origin->pkt);
             sdb_packet_free(pkt_origin);
         }
 
@@ -223,6 +260,7 @@ static void process_pkt_sdb(void)
     } else {
         sdb_queue_push_nolock(&mod->queue, sdb_packet(pkt, id_origin));
         mcs_write_command(pkt, mod->wfd);
+        sdb_qos_register_packet_out(pkt);
     }
 }
 
@@ -238,15 +276,19 @@ static void process_pkt_socket(void)
         return;
     }
 
+    sdb_qos_register_packet_in(pkt);
+
     if(mcs_is_answer_packet(pkt)) {
         pkt_origin = sdb_queue_get_nolock(&mod->queue, pkt);
         if(pkt_origin == NULL) {
             printf_dbg("Unexpected answer\n");
+            sdb_qos_register_packet_scrap(pkt);
             /* Sending an answer means closing a communication. Sending an
              * error would start an infinite chain of error messages.
              */
         } else {
             sdb_module_write_mcs_packet(pkt, pkt_origin->id_process);
+            sdb_qos_register_packet_ready(pkt_origin->pkt);
             sdb_packet_free(pkt_origin);
         }
 
@@ -264,6 +306,8 @@ static void process_pkt_socket(void)
                 break;
             default:
                 printf_dbg("Unhandled type\n");
+                mcs_write_command_and_free(mcs_err_packet(pkt, EUNDEF), mod->wfd);
+                sdb_qos_register_packet_scrap(pkt);
                 break;
         }
     }
@@ -314,6 +358,11 @@ void sdb_module_init(int rfd, int wfd)
 error_ret:
     close(rfd);
     close(wfd);
+}
+
+SDBModule *get_info(void)
+{
+    return (SDBModule *)pthread_getspecific(sdb_module_info);
 }
 
 int sdb_module_write_mcs_packet(const MCSPacket *pkt, unsigned int to)
@@ -373,6 +422,8 @@ int sdb_module_write_mcs_packet(const MCSPacket *pkt, unsigned int to)
 
     mod_to->data_valid = true;
 
+    sdb_qos_register_packet_out(pkt);
+
     pthread_cond_broadcast(&mod_to->cond_var);
     pthread_mutex_unlock(&mod_to->lock);
 
@@ -398,6 +449,7 @@ MCSPacket *sdb_module_read_mcs_packet(void)
 
     /* Leave a gap for the first element, the id from the sender */
     pkt = abs_malloccpy(mod->data + sizeof(unsigned int), sizeof(*pkt));
+
     if(pkt->dest != NULL) {
         pkt->dest = abs_malloccpy(pkt->dest, strlen(pkt->dest) + 1);
     }
@@ -411,6 +463,8 @@ MCSPacket *sdb_module_read_mcs_packet(void)
     }
 
     mod->data_valid = false;
+
+    sdb_qos_register_packet_in(pkt);
 
     return pkt;
 }
@@ -462,6 +516,8 @@ void *sdb_module_thread(void *arg)
 
     sdb_queue_init(&mod->queue);
 
+    mod->qos_enabled = (SDB_QOS_ACTIVE && SDB_QOS_DEFAULT_ON);
+
     pthread_mutex_lock(&mod->lock);
 
     pkt = mcs_read_command(mod->rfd, mod->wfd);
@@ -469,6 +525,8 @@ void *sdb_module_thread(void *arg)
         printf_dbg("First packet is wrong\n");
         goto error_ret;
     }
+
+    sdb_qos_register_packet_in(pkt);
 
     if(mcs_command(pkt) != MCS_MESSAGE_SDB_HANDSHAKE) {
         printf_dbg("Unexpected packet\n");
@@ -507,6 +565,7 @@ void *sdb_module_thread(void *arg)
     }
 
     mcs_write_command_and_free(mcs_ok_packet(pkt), mod->wfd);
+    sdb_qos_register_packet_ready(pkt);
     mcs_free(pkt);
 
     mod->data = malloc(SDB_MODULE_DATA_SIZE);
@@ -539,6 +598,7 @@ void *sdb_module_thread(void *arg)
 
 error_pkt:
     mcs_write_command_and_free(mcs_err_packet(pkt, ECONNREFUSED), mod->wfd);
+    sdb_qos_register_packet_scrap(pkt);
     mcs_free(pkt);
 error_ret:
     pthread_cleanup_pop(1);

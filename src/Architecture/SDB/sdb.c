@@ -30,6 +30,8 @@ int main()
         goto error;
     }*/
 
+    sdb_qos_init();
+
     /* Start director thread */
     if(pthread_create(&director_id, NULL, sdb_director_thread, NULL) < 0) {
         printf_dbg("Error creating thread\n");

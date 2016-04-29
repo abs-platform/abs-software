@@ -1,5 +1,5 @@
 APPLICATION = sdb
-SOURCES = sdb.c sdb_director.c sdb_module.c sdb_observer.c sdb_queue.c sdb_usb.c
+SOURCES = sdb.c sdb_director.c sdb_module.c sdb_observer.c sdb_queue.c sdb_usb.c sdb_qos.c
 SUBDIRS = Test
 
 LOCAL_LDFLAGS = -lmcs -pthread -labs

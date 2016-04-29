@@ -14,6 +14,9 @@
 #define SDB_USB_ID              (SDB_MODULE_MAX + 1)
 #define SDB_USB_DEVICE          "/dev/usb_accessory"
 
+#define SDB_QOS_ACTIVE          1
+#define SDB_QOS_DEFAULT_ON      1
+
 typedef struct SDBPacket {
     unsigned int id_process;
     int priority;
@@ -50,9 +53,10 @@ typedef struct SDBModule {
     bool data_socket;
 
     SDBQueue queue;
+    bool qos_enabled;
 } SDBModule;
 
-typedef enum SDBUSBResponse{
+typedef enum SDBUSBResponse {
     SDB_USB_OK,
     SDB_USB_OK_DATA,
     SDB_USB_ERROR
@@ -67,6 +71,7 @@ extern SDBQueue sdb_usb_queue_send;
 
 /* SDB module section */
 void sdb_module_init(int rfd, int wfd);
+SDBModule *get_info(void);
 int sdb_module_write_mcs_packet(const MCSPacket *pkt, unsigned int to);
 MCSPacket *sdb_module_read_mcs_packet(void);
 void sdb_module_cancel_all(void);
@@ -93,4 +98,13 @@ SDBPacket *sdb_queue_get_nolock(SDBQueue *queue, MCSPacket *answer);
 SDBPacket *sdb_queue_pop_block(SDBQueue *queue);
 void sdb_queue_init(SDBQueue *queue);
 
+/* SDB QOS section */
+void sdb_qos_init(void);
+void sdb_qos_start(void);
+void sdb_qos_stop(void);
+int sdb_qos_dump_module(const MCSPacket *from, MCSPacket **out);
+void sdb_qos_register_packet_in(const MCSPacket *pkt);
+void sdb_qos_register_packet_out(const MCSPacket *pkt);
+void sdb_qos_register_packet_ready(const MCSPacket *pkt);
+void sdb_qos_register_packet_scrap(const MCSPacket *pkt);
 #endif
