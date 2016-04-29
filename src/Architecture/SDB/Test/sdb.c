@@ -7,10 +7,10 @@
 #include <sys/wait.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-
 #include <mcs.h>
 #include <sdb.h>
 #include <abs_test.h>
+#include "../sdb_private.h"
 
 #define SDB_PATH "../sdb"
 
@@ -98,6 +98,7 @@ void *sdb_test_thread(void *arg)
     int id;
     int id_other;
     char name_other[5];
+    char name[5];
     char buffer[100];
     char welcome[] = "appX:app";
     struct sockaddr_in addr;
@@ -114,6 +115,7 @@ void *sdb_test_thread(void *arg)
     } else {
         id_other = 1;
     }
+    sprintf(name, "app%d", id);
     sprintf(name_other, "app%d", id_other);
 
     addr.sin_family = AF_INET;
@@ -121,7 +123,7 @@ void *sdb_test_thread(void *arg)
     addr.sin_addr.s_addr = INADDR_ANY;
 
     /* SDB connection */
-    sprintf(buffer, "%s: SDB Connection", name_other);
+    sprintf(buffer, "%s: SDB Connection", name);
     abs_test_printf("Setting connection for %s\n", name_other);
 
     fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -138,7 +140,7 @@ void *sdb_test_thread(void *arg)
     abs_test_add_result(PASS, buffer);
 
     /* Handshaking */
-    sprintf(buffer, "%s: Handshake", name_other);
+    sprintf(buffer, "%s: Handshake", name);
     /* Remember NULL character! */
     pkt = mcs_create_packet(MCS_MESSAGE_SDB_HANDSHAKE, 0, NULL,
                             strlen(welcome) + 1, (unsigned char *)welcome);
@@ -170,8 +172,39 @@ void *sdb_test_thread(void *arg)
 
     abs_test_add_result(PASS, buffer);
 
+#if SDB_QOS_ACTIVE && !SDB_QOS_DEFAULT_ON
+    /* Start QOS logging */
+    sprintf(buffer, "%s: Start QOS", name);
+    pkt = mcs_create_packet(MCS_MESSAGE_SDB_QOS_START, 0, NULL, 0, NULL);
+    if(mcs_write_command(pkt, fd) != 0) {
+        abs_test_printf("Error sending SDB_QOS_START packet\n");
+        goto error_free;
+    }
+
+    mcs_free(pkt);
+
+    pkt = mcs_read_command(fd, fd);
+
+    if(pkt == NULL) {
+        abs_test_printf("Could not read response packet\n");
+        goto error;
+    } else if(pkt->type != MCS_TYPE_OK) {
+        if(pkt->type == MCS_TYPE_ERR) {
+            abs_test_printf("Wrong response packet. Error %d\n",
+                                        mcs_err_code_from_command(pkt));
+        } else {
+            abs_test_printf("Wrong reponse packet. Type: %hhd\n",
+                                                            pkt->type);
+        }
+        goto error_free;
+    }
+
+    mcs_free(pkt);
+    abs_test_add_result(PASS, buffer);
+#endif
+
     /* Sending TEST message */
-    sprintf(buffer, "%s: Test packet", name_other);
+    sprintf(buffer, "%s: Test packet", name);
     /* app1 will send the test packet, whereas app2 will receive it */
     if(id == 1) {
         pkt = mcs_create_packet_with_dest(MCS_MESSAGE_TEST, "app2",
@@ -214,8 +247,41 @@ void *sdb_test_thread(void *arg)
     }
 
     mcs_free(pkt);
-
     abs_test_add_result(PASS, buffer);
+
+#if SDB_QOS_ACTIVE
+    /* Asking for QOS status */
+    sprintf(buffer, "%s: Get QOS", name);
+    pkt = mcs_create_packet(MCS_MESSAGE_SDB_QOS_STOP, 0, NULL, 0, NULL);
+    if(mcs_write_command(pkt, fd) != 0) {
+        abs_test_printf("Error sending SDB_QOS_STOP packet\n");
+        goto error_free;
+    }
+
+    mcs_free(pkt);
+
+    pkt = mcs_read_command(fd, fd);
+
+    if(pkt == NULL) {
+        abs_test_printf("Could not read response packet\n");
+        goto error;
+    } else if(pkt->type != MCS_TYPE_OK_DATA) {
+        if(pkt->type == MCS_TYPE_ERR) {
+            abs_test_printf("Wrong response packet. Error %d\n",
+                                        mcs_err_code_from_command(pkt));
+        } else {
+            abs_test_printf("Wrong reponse packet. Type: %hhd\n",
+                                                            pkt->type);
+        }
+        goto error_free;
+    } else {
+        printf_dbg("%s\n\n\n", pkt->data);
+        abs_test_printf("%s\n", pkt->data);
+    }
+
+    mcs_free(pkt);
+    abs_test_add_result(PASS, buffer);
+#endif
 
     pthread_exit(NULL);
 

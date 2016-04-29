@@ -2,9 +2,9 @@
 #define __MCS_H
 
 #include <stdbool.h>
-#include <sdb.h>
+#include <sdb_group.h>
 
-#define MCS_READ_TIMEOUT_US 1000
+#define MCS_READ_TIMEOUT_US 100000
 #define MCS_COMMAND_TYPES 3
 
 enum MCSType {
@@ -89,9 +89,9 @@ MCSPacket *mcs_read_command(int rfd, int wfd);
 int mcs_write_command(MCSPacket *pkt, int fd);
 int mcs_write_command_and_free(MCSPacket *pkt, int fd);
 
-MCSPacket *mcs_ok_packet_data(const MCSPacket *from, void *data, size_t size);
-MCSPacket *mcs_ok_packet(const MCSPacket *from);
-MCSPacket *mcs_err_packet(const MCSPacket *from, int err_code);
+MCSPacket *mcs_ok_packet_data_id(unsigned int id, void *data, size_t size);
+MCSPacket *mcs_ok_packet_id(unsigned int id);
+MCSPacket *mcs_err_packet_id(unsigned int id, int err_code);
 MCSPacket *mcs_create_packet(MCSCommand cmd, unsigned short nargs,
         unsigned char *args, unsigned short data_size, unsigned char *data);
 MCSPacket *mcs_create_packet_with_dest(MCSCommand cmd, char *dest,
@@ -101,9 +101,26 @@ MCSPacket *mcs_create_packet_with_dest(MCSCommand cmd, char *dest,
 int mcs_err_code_from_command(const MCSPacket *pkt);
 const char *mcs_command_to_string(const MCSPacket *pkt);
 bool mcs_is_answer_packet(const MCSPacket *pkt);
+
 static inline MCSCommand mcs_command(MCSPacket *pkt)
 {
     return ((unsigned int)pkt->type << 2) | (unsigned int)pkt->cmd;
+}
+
+static inline MCSPacket *mcs_ok_packet_data(const MCSPacket *from, void *data,
+                                            size_t size)
+{
+    return mcs_ok_packet_data_id(from->id, data, size);
+}
+
+static inline MCSPacket *mcs_ok_packet(const MCSPacket *from)
+{
+    return mcs_ok_packet_id(from->id);
+}
+
+static inline MCSPacket *mcs_err_packet(const MCSPacket *from, int err_code)
+{
+    return mcs_err_packet_id(from->id, err_code);
 }
 #endif
 

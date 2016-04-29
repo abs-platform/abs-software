@@ -23,6 +23,7 @@ src/app_module/app/libs
 *.jar
 
 # Binaries
+/src/Architecture/Libraries/SDB/Test/sdb
 /src/Architecture/MCS/mcsg
 /src/Architecture/MCS/Test/mcs
 /src/Architecture/SDB/sdb

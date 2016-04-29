@@ -1,7 +1,7 @@
 TEST = sdb
 SOURCES = sdb.c
 
-LOCAL_LDFLAGS = -labs_test -lmcs -pthread
+LOCAL_LDFLAGS = -labs_test -lmcs -lsdb -pthread
 
 OBJS = $(SOURCES:%.c=%.o)
 DEPS = $(SOURCES:%.c=%.d)

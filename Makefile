@@ -2,6 +2,10 @@ include configure.mk
 
 SUBDIRS = src
 
+ifdef gen_docs
+SUBDIRS += doc
+endif
+
 SUBTEST = $(addsuffix .test, $(SUBDIRS))
 SUBCLEAN = $(addsuffix .clean, $(SUBDIRS))
 
@@ -9,8 +13,8 @@ all: $(SUBDIRS)
 
 check: test
 
-test: all
-	$(MAKE) $(SUBTEST); STATUS=$?; $(SHELL) ./test.sh $(TEST_FILE); exit $(STATUS)
+test: all $(SUBTEST)
+	$(SHELL) ./test.sh $(TEST_FILE)
 
 clean: $(SUBCLEAN)
 
@@ -23,4 +27,4 @@ $(SUBCLEAN): %.clean:
 $(SUBTEST): %.test:
 	$(MAKE) -C $* test
 
-.PHONY: all clean check test $(SUBDIRS) $(SUBCLEAN) $(SUBTEST) 
+.PHONY: all clean check test src $(SUBDIRS) $(SUBCLEAN) $(SUBTEST)

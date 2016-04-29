@@ -1,4 +1,16 @@
-SUBDIRS = Architecture
+SUBDIRS =
+
+ifdef build_arduino
+SUBDIRS += Arduino
+endif
+
+ifdef build_android_java
+SUBDIRS += Android
+endif
+
+ifdef build_android_c
+SUBDIRS += Architecture
+endif
 
 SUBTEST = $(addsuffix .test,$(SUBDIRS))
 SUBCLEAN = $(addsuffix .clean,$(SUBDIRS))
@@ -18,4 +30,4 @@ $(SUBTEST): %.test:
 $(SUBCLEAN): %.clean:
 	$(MAKE) -C $* clean
 
-.PHONY: all clean test $(SUBDIRS) $(SUBCLEAN) $(SUBTEST) 
+.PHONY: all clean test $(SUBDIRS) $(SUBCLEAN) $(SUBTEST)
