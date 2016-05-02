@@ -1,8 +1,8 @@
 USBPacket usb_ok_packet()
 {
     USBPacket packet;
-    packet.command = 0;
-    packet.parameters = 0;
+    packet.command = CONTROL;
+    packet.parameters = OK;
     packet.data_size = 0;
     return packet;
 }
@@ -10,8 +10,8 @@ USBPacket usb_ok_packet()
 USBPacket usb_ok_data_packet(int arg, char *result, int dsize)
 {
     USBPacket packet;
-    packet.command = 0; 
-    packet.parameters = 1;
+    packet.command = CONTROL; 
+    packet.parameters = OK_DATA;
     packet.cmd_arg1 = (arg >> 1) & 0x7F;
     packet.data_size = dsize;
     packet.data = (char *)((arg >> 1) & 0x7F);
@@ -21,8 +21,8 @@ USBPacket usb_ok_data_packet(int arg, char *result, int dsize)
 USBPacket usb_error_packet(int error)
 {
     USBPacket packet;
-    packet.command = 0;
-    packet.parameters = 2;
+    packet.command = CONTROL;
+    packet.parameters = ERRORS;
     packet.cmd_arg1 = error;
     packet.data_size = 0;
     return packet;

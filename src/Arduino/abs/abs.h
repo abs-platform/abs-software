@@ -44,6 +44,13 @@ typedef enum {
 } Command;
 
 typedef enum {
+    OK,
+    OK_DATA,
+    ERRORS,
+    FCS_ERROR
+} ParametersControl;
+
+typedef enum {
     ANALOG_WRITE,
     DIGITAL_WRITE,
     ANALOG_READ,
@@ -79,8 +86,7 @@ typedef enum {
 } ParametersServo;
 
 typedef enum {
-  
-  
+    FCS_ERROR  
 } Errors;
 
 #endif
