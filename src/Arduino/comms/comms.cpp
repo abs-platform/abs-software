@@ -18,12 +18,12 @@ const int chip_select_pin = 49;
 
 /*The next variables save the changes on the default ones*/
 int frequency;
-int bitrate;
-String modulationValue; 
+int bitrate = BITRATE;
+uint8_t modulationValue = 0xFF;//to distinguish it from value 0
 
 /*Setting up the transceiver*/
 void configure() {
-pinMode(chip_select_pin, OUTPUT);
+    pinMode(chip_select_pin, OUTPUT);
     SPI.begin();    
     write_register(AGCTARGET, 0x0E);
     write_register(PLLRNG, (read_register(PLLRNG) | 0x01));
@@ -35,11 +35,11 @@ pinMode(chip_select_pin, OUTPUT);
     configure_FSKDEV(BITRATE);
     configure_TXRATE(BITRATE);
     configure_CICDEC(BITRATE);
-    configure_MODULATION(MODdefault);
-    uint32_t fskmul = configure_FSKMUL(BITRATE,TMGCORRFRAC);
+    configure_MODULATION(MOD_DEFAULT);
+    uint32_t fskmul = configure_FSKMUL(BITRATE,TMGCORRFRAC_DEFAULT);
     uint32_t datarate = configure_DATARATE(BITRATE);
     //we need the values of fskmul and datarate for TMGGAIN config
-    configure_TMGGAIN(fskmul,datarate,TMGCORRFRAC);
+    configure_TMGGAIN(fskmul,datarate,TMGCORRFRAC_DEFAULT);
     configure_AGCATTACK(BITRATE);
     configure_AGCDECAY(BITRATE);
     configure_PHASEGAIN();
@@ -108,8 +108,8 @@ char *rx(){
     auto_ranging();
     write_register(PWRMODE, 0x69);
     delay (0.05);
-    char *data = hdlc_rx();
-    write_register(PWRMODE, 0x00);
+	char *data = hdlc_rx(); 
+	write_register(PWRMODE, 0x00);
     return data;
   }
 
@@ -118,16 +118,10 @@ char *rx(){
 void change_x(int parameter, int value) {
     switch(parameter) {
         case FREQUENCY:
-			/*We expect the value to be 433 or 915*/
-            configure_FREQ(value*10^6);
-            int bandsel;
-            if(value == 433){
-                bandsel = 1;
-            }else{
-                bandsel = 0;
-			}
-            configure_PLLLOOP(bandsel);
-            frequency = value;
+			/*We expect the value to be 1(433) or 0(915)*/
+			frequency = ((1-value)*915 + value*433)*10^6;
+            configure_FREQ(frequency);
+            configure_PLLLOOP(value);
             break;
 			
         case BITRATE
@@ -135,8 +129,8 @@ void change_x(int parameter, int value) {
             configure_FSKDEV(value);
             configure_TXRATE(value);
             configure_CICDEC(value); 
-            if(modulationValue == NULL){
-				uint32_t fskmul = configure_FSKMUL(value,tmgcorrfrac, MODDefault);
+            if(modulationValue == 0xFF){
+				uint32_t fskmul = configure_FSKMUL(value,tmgcorrfrac, MOD_DEFAULT);
 			} else {
 				uint32_t fskmul = configure_FSKMUL(value,tmgcorrfrac, modulationValue);
 			}
@@ -156,14 +150,15 @@ void change_x(int parameter, int value) {
             break;
 			
         case TMRECOV:
-            if(modulationValue==NULL){
-                modulation = MODDefault;
+            if(modulationValue==0xFF){
+                modulation = MOD_DEFAULT;
             }else{
                 modulation=modulationValue;
             }
+			uint32_t tmgcorrfrac = read_register(TMGCORRFRAC); 
             uint32_t fskmul = configure_FSKMUL(bitrate,value, modulationValue);
             uint32_t datarate = configure_DATARATE(value,bitrate);
-            configure_TMGGAIN(fskmul, datarate, TMGCORRFRAC);
+            configure_TMGGAIN(fskmul, datarate, tmgcorrfrac);
             break;
     }
 }
@@ -199,7 +194,7 @@ void auto_ranging(){
 /*------------------CONFIGURATION FUNCTIONS---------------------*/
 /*This function configures register PLLLOOP*/
 void configure_PLLLOOP(int band){
-    bandsel = band << 8;
+    bandsel = band << 5;
     byte pllloop = bandsel | 0b00001111;
     write_register(PLLLOOP, pllloop);
 }
@@ -274,15 +269,15 @@ void configure_CICDEC(int bitrate){
     }
 
 /*This function configures register MODULATION*/
-void configure_MODULATION(String modulation){
+void configure_MODULATION(int modulation){
     uint8_t modValue = getModulationReg(modulation);
     write_register(MODULATION, modValue); 
 }
 
 /*This function configures register FSKMUL*/
-uint32_t configure_FSKMUL(int bitrate, int tmgcorrfrac, String modulationValue){
+uint32_t configure_FSKMUL(int bitrate, int tmgcorrfrac, int modValue){
     unsigned int = fskmul;
-    if(getModulationReg(modulationValue) < 8){
+    if(getModulationReg(modValue) < 8){
         fskmul = 1;
     }else{
         unsigned int comprovacion = FXTAL/(4*bitrate*cicdec);
@@ -373,24 +368,24 @@ void configure_AMPLGAIN(){
 
 /*This function translates the String modulation into the value to be assigned
 *to the register in hexadecimal*/
-uint8_t getModulationReg(String modulation){
+uint8_t getModulationReg(int modulation){
     switch (modulation){
-        case "ASK":
+        case ASK:
             modValue = 0x00;
             break;
-        case "PSK":
+        case PSK:
             modValue = 0x04;
             break;
-        case "OQPSK":
+        case OQPSK:
             modValue = 0x06;
             break;
-        case "MSK":
+        case MSK:
             modValue = 0x07;
             break;
-        case "FSK":
+        case FSK:
             modValue = 0x0B;
             break;
-        case "GFSK":
+        case GFSK:
 		    modValue = 0x0F;
             break;
     }

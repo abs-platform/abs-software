@@ -6,7 +6,9 @@
 #include "AX5042.h"
  
 char *hdlc_rx(){
+	char *response;
     int received;
+	int i = 0;
     unsigned int control;
     unsigned int data;
     control = read_register(FIFOCTRL);
@@ -37,9 +39,41 @@ char *hdlc_rx(){
             }
           }
         }else{
-          receivingDone = 1;
+          received = 1;
           return;
           /*DISCARDED PACKAGE: Abort detected*/
+        }
+      }
+    }
+	*/
+	while(received == 0){
+        control = read_register(FIFOCTRL);
+        data = read_register(FIFODATA);
+		if(control & bit(0) == bit(0)){
+            receivingDone = 1;
+            return;
+            /*DISCARDED PACKAGE: Abort detected*/
+		}
+        else if(control & bit(1) == bit(1)){   
+            if(data & bit(3) == bit(3)){ 
+                if(data & ( bit(2) | bit(1) | bit(0) ) == 0x06){
+                    received = 1;
+					(response + i) = data;
+                    return response;
+                }else{
+                    received = 1
+                    return;
+                    /*DISCARDED PACKAGE: Number of packet bits not divisible by 8*/
+                }
+            }else{
+                received= 1;
+                response[0]=1;
+				return response;
+                /*DISCARDED PACKAGE: wrong CRC
+				 *We will notify the HWDmods of this reception */
+            }  
+        }else{
+            /*DATA FRAME: save it to data buffer*/
         }
       }
     }

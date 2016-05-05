@@ -6,6 +6,8 @@
 #include <SPI.h> /* For communication via SPI. */
 #include "comms.h"
 
+#define MAX_DATA_SIZE
+
 
 char *hdlc_rx();
 

@@ -198,19 +198,28 @@ USBPacket execute_packet(USBPacket *packet)
                         break;
                     case CONFIGURE:
                         comms.configure();
+                        response = usb_ok_packet();
                         break;
                     case TRANSMIT:
                         data = packet->data;
                         data_size = packet->data_size;
                         comms.tx(data);
+                        response = usb_ok_packet();
                         break;
                     case RECEIVE:
-                        response=comms.rx();
+                        char *received;
+                        received=comms.rx();
+                        if(*received == 1){
+                            response = usb_ok_data_packet(NULL, *(received+1), 1);
+                        }else{
+                            response = usb_error_packet(FCS_ERROR);
+                        }
                         break;
                     case CHANGE_X:
                         parameter = packet->cmd_arg1;
                         value = packet->cmd_arg2;
                         comms.change_x(parameter,value);
+                        response = usb_ok_packet();
                         break;
                 }
             } else {

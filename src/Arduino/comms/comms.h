@@ -80,9 +80,29 @@
 #define FIF       1000000
 #define FXTAL     16300000
 #define H         0.5
-#define TMGCORRFRAC     32
-#define MODdefault      "FSK"
+#define TMGCORRFRAC_DEFAULT   32
+#define MOD_DEFAULT      4
 #define BANDSEL         1
 
+typedef enum {
+    FREQUENCY,
+	BITRATE,
+	MODULATION,
+	TMRECOV
+} VariablesChangeX;
+
+typedef enum {
+    ASK,
+	PSK,
+	OQPSK,
+	MSK,
+	FSK,
+	GFSK
+} ModulationTypes;
+
+typedef enum{
+	915
+	433
+} Bandsel;
 
 #endif
