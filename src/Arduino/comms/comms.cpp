@@ -95,7 +95,7 @@ void tx(char *data,int data_size){
 char *rx(){  
     write_register(PWRMODE, 0x60);
     delay (3);
-    if(frequency == NULL){
+    if(frequency == 0){
         configure_FREQ(FCARRIER);
     }else{
         configure_FREQ(frequency);
