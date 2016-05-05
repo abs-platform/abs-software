@@ -10,12 +10,13 @@
 #define MAX_SERVO 2
 #define MAX_SERIAL 2
 #define MAX_EVENTS 10
-#define MAX_PACKET_SIZE 500
+#define MAX_PACKET_SIZE 2 * 1024
 #define SD_CS 52
 #define COMMS_CS 49
 #define TIMER_INTERVAL 500000
 #define SERIAL_BITRATE 115200
-const int bitrate[] = {300, 1200, 2400, 4800, 9600, 14400, 19200, 28800, 38400, 57600,  115200};
+const long bitrate[] = {300, 1200, 2400, 4800, 9600, 14400,
+                        19200, 28800, 38400, 57600,  115200};
 
 typedef struct {
      int command;
@@ -23,8 +24,7 @@ typedef struct {
      int cmd_arg1;
      int cmd_arg2;
      int data_size;
-     char *data;
-     uint8_t *pkg;
+     uint8_t *data;
      int packet_id;
  } USBPacket;
 
@@ -32,7 +32,7 @@ typedef struct {
     int bufferid;
     int interval;
     int execute;
-    USBPacket action;
+    USBPacket *action;
 } Event;
 
 typedef enum {
@@ -60,7 +60,7 @@ typedef enum {
     WRITE_SPI,
     INIT_CAN,
     READ_CAN,
-    WRITE_CAN
+    WRITE_CAN,
     CONFIGURE,
     TRANSMIT,
     RECEIVE,
@@ -68,19 +68,19 @@ typedef enum {
 } ParametersComms;
 
 typedef enum {
-    CONF,    
+    CONF,
     DUMP
 } ParametersEvents;
 
 typedef enum {
     START,
-    SET_DC,    
-    STOP  
+    SET_DC,
+    STOP
 } ParametersServo;
 
 typedef enum {
-  
-  
+
+
 } Errors;
 
 #endif
