@@ -234,10 +234,8 @@ USBPacket *execute_packet(USBPacket *packet)
                         }
                         break;
                     case CHANGE_X:
-                        parameter = packet->cmd_arg1;
-                        value = packet->cmd_arg2;
-                        comms.change_x(parameter,value);
-                        response = usb_ok_packet(packet->packet_id,1);
+                        comms.change_x(parameter = packet->cmd_arg1,packet->cmd_arg2);
+                        response = usb_ok_packet(packet->packet_id);
                         break;
                 }
             } else {

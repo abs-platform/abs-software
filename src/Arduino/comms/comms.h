@@ -75,7 +75,7 @@
 
 /*Parameters declaration*/
 
-#define BITRATE   100000
+#define BITRATE_DEFAULT   100000
 #define FCARRIER  433000000
 #define FIF       1000000
 #define FXTAL     16300000
@@ -87,7 +87,7 @@
 typedef enum {
     FREQUENCY,
 	BITRATE,
-	MODULATION,
+	MODULATION_TYPE,
 	TMRECOV
 } VariablesChangeX;
 
@@ -99,10 +99,5 @@ typedef enum {
 	FSK,
 	GFSK
 } ModulationTypes;
-
-typedef enum{
-	915
-	433
-} Bandsel;
 
 #endif

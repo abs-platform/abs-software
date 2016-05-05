@@ -1,5 +1,6 @@
 #include <comms.h>
 #include <hdlc.h>
+
 #include <adk.h>
 #include <usbhub.h>
 #include <TimerOne.h>
@@ -7,8 +8,6 @@
 #include <SD.h>
 #include <SPI.h>
 #include <Servo.h>
-#include <comms.h>
-#include <hdlc.h>
 #include <avr/wdt.h>
 #include "abs.h"
 

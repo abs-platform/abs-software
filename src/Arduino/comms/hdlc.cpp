@@ -7,8 +7,9 @@
  
 char *hdlc_rx(){
 	char *response;
+	char data_size;
     int received;
-	int i = 0;
+	int i = 2;
     unsigned int control;
     unsigned int data;
     control = read_register(FIFOCTRL);
@@ -18,39 +19,10 @@ char *hdlc_rx(){
         data = read_register(FIFODATA);
     }
     received=0;
-    while(received == 0){
-        control = read_register(FIFOCTRL);
-        data = read_register(FIFODATA);
-        if(control & bit (1) == bit(1)){ 
-          if(control & bit(0) == bit(0)){
-            if(data & bit(3) == bit(3)){ 
-              if(data & ( bit(2) | bit(1) | bit(0) ) == 0x06){
-                received = 1;
-                 return data;
-                }else{
-                    received = 1;
-                    return;
-                    /*DISCARDED PACKAGE: Number of packet bits not divisible by 8*/
-              }
-            }else{
-              received= 1;
-              return;
-              /*DISCARDED PACKAGE: wrong CRC*/
-            }
-          }
-        }else{
-          received = 1;
-          return;
-          /*DISCARDED PACKAGE: Abort detected*/
-        }
-      }
-    }
-	*/
 	while(received == 0){
         control = read_register(FIFOCTRL);
         data = read_register(FIFODATA);
-		if(control & bit(0) == bit(0)){
-            receivingDone = 1;
+        if(control & bit(0) == bit(0)){
             return;
             /*DISCARDED PACKAGE: Abort detected*/
 		}
@@ -58,26 +30,28 @@ char *hdlc_rx(){
             if(data & bit(3) == bit(3)){ 
                 if(data & ( bit(2) | bit(1) | bit(0) ) == 0x06){
                     received = 1;
-					(response + i) = data;
-                    return response;
+                    data_size = i-2;
+                    *response = 0;
+                    *(response+1) = data_size;
+                    /*CRC OK: end of packet*/
                 }else{
-                    received = 1
-                    return;
+            
                     /*DISCARDED PACKAGE: Number of packet bits not divisible by 8*/
                 }
-            }else{
+           }else{
                 received= 1;
-                response[0]=1;
-				return response;
+                *response=1;
                 /*DISCARDED PACKAGE: wrong CRC
-				 *We will notify the HWDmods of this reception */
+                *We will notify the HWDmods of this reception */
             }  
         }else{
+            *(response + i) = data;
+            i++;
             /*DATA FRAME: save it to data buffer*/
         }
-      }
     }
-
+    return response;
+}
 
 
 /*

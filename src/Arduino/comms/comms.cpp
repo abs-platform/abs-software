@@ -18,7 +18,7 @@ const int chip_select_pin = 49;
 
 /*The next variables save the changes on the default ones*/
 int frequency;
-int bitrate = BITRATE;
+int bitrate = BITRATE_DEFAULT;
 uint8_t modulationValue = 0xFF;//to distinguish it from value 0
 
 /*Setting up the transceiver*/
@@ -32,16 +32,16 @@ void configure() {
     configure_FREQ(FCARRIER);
     configure_TXPWR();
     configure_IFFREQ(FXTAL);
-    configure_FSKDEV(BITRATE);
-    configure_TXRATE(BITRATE);
-    configure_CICDEC(BITRATE);
+    configure_FSKDEV(BITRATE_DEFAULT);
+    configure_TXRATE(BITRATE_DEFAULT);
+    configure_CICDEC(BITRATE_DEFAULT);
     configure_MODULATION(MOD_DEFAULT);
-    uint32_t fskmul = configure_FSKMUL(BITRATE,TMGCORRFRAC_DEFAULT);
-    uint32_t datarate = configure_DATARATE(BITRATE);
+    uint32_t fskmul = configure_FSKMUL(BITRATE_DEFAULT,TMGCORRFRAC_DEFAULT);
+    uint32_t datarate = configure_DATARATE(BITRATE_DEFAULT);
     //we need the values of fskmul and datarate for TMGGAIN config
     configure_TMGGAIN(fskmul,datarate,TMGCORRFRAC_DEFAULT);
-    configure_AGCATTACK(BITRATE);
-    configure_AGCDECAY(BITRATE);
+    configure_AGCATTACK(BITRATE_DEFAULT);
+    configure_AGCDECAY(BITRATE_DEFAULT);
     configure_PHASEGAIN();
     configure_FREQGAIN();
     configure_FREQGAIN2();
@@ -95,7 +95,7 @@ void tx(char *data,int data_size){
 char *rx(){  
     write_register(PWRMODE, 0x60);
     delay (3);
-    if(frequency == NULL){
+    if(frequency == 0){
         configure_FREQ(FCARRIER);
     }else{
         configure_FREQ(frequency);
@@ -141,7 +141,7 @@ void change_x(int parameter, int value) {
             bitrate=value;
             break;
   
-        case MODULATION:
+        case MODULATION_TYPE:
             uint32_t tmgcorrfrac = read_register(TMGCORRFRAC);
             configure_MODULATION(value);
             uint32_t fskmul = configure_FSKMUL(bitrate,tmgcorrfrac, value);
