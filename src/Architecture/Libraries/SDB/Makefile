@@ -1,30 +1,35 @@
-APPLICATION = sdb
-SOURCES = sdb.c sdb_director.c sdb_module.c sdb_observer.c sdb_queue.c sdb_usb.c sdb_qos.c
+LIBRARIES = libsdb.so
+SOURCES = sdb.c
 SUBDIRS = Test
 
-LOCAL_LDFLAGS = -lmcs -pthread -labs
+LOCAL_CFLAGS = -g -fpic
+LOCAL_LDFLAGS = -lmcs -shared -pthread
 
 OBJS = $(SOURCES:%.c=%.o)
 DEPS = $(SOURCES:%.c=%.d)
+
 SUBTEST = $(addsuffix .test,$(SUBDIRS))
 SUBCLEAN = $(addsuffix .clean,$(SUBDIRS))
 
-all: $(APPLICATION) $(SUBDIRS)
-	for app in $(APPLICATION); do cp $$app $(BIN_DIR)/Architecture/SDB; done;
+all: $(LIBRARIES)
+	for lib in $(LIBRARIES); do cp $$lib $(LIB_DIR); done;
 
 test: $(SUBTEST)
 
 clean: $(SUBCLEAN)
-	rm -rf $(OBJS) $(DEPS) $(APPLICATION)
+	rm -rf $(OBJS) $(DEPS) $(LIBRARIES)
 
-$(APPLICATION): $(OBJS)
-	$(ANDROID_CC) $^ -o $@ $(ANDROID_LDFLAGS) $(LOCAL_LDFLAGS)
+$(LIBRARIES): $(OBJS)
+	$(ANDROID_CC) $< -o $@ $(ANDROID_LDFLAGS) $(LOCAL_LDFLAGS)
 
 -include $(DEPS)
 
 %.o: %.c
 	$(ANDROID_CC) -M -MF $*.d $< $(ANDROID_CFLAGS) $(LOCAL_CFLAGS)
 	$(ANDROID_CC) -c $< -o $@ $(ANDROID_CFLAGS) $(LOCAL_CFLAGS)
+
+$(SUBDIRS):
+	$(MAKE) -C $@
 
 $(SUBTEST): %.test:
 	$(MAKE) -C $* test

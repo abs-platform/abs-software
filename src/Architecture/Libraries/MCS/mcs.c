@@ -55,7 +55,7 @@ static int read_check_config(int fd, MCSPacket *pkt)
                 mcs_command_message_list[pkt->cmd].destination[0] == '@') {
         if(abs_read(fd, (char *)&dest_size, sizeof(dest_size),
                         MCS_READ_TIMEOUT_US) < (int)sizeof(dest_size)) {
-            printf_dbg("Could not read\n");
+            printf_dbg("Could not read destination size\n");
             return -1;
         }
 
@@ -67,7 +67,7 @@ static int read_check_config(int fd, MCSPacket *pkt)
         pkt->dest = malloc(dest_size + 1);
         if(abs_read(fd, pkt->dest, dest_size, MCS_READ_TIMEOUT_US)
                                                     < dest_size) {
-            printf_dbg("Could not read\n");
+            printf_dbg("Could not read destination\n");
             return -1;
         }
 
@@ -78,14 +78,14 @@ static int read_check_config(int fd, MCSPacket *pkt)
     if(cmd->raw_data) {
         if(abs_read(fd, (char *)&pkt->data_size, sizeof(pkt->data_size),
                         MCS_READ_TIMEOUT_US) < (int)sizeof(pkt->data_size)) {
-            printf_dbg("Could not read\n");
+            printf_dbg("Could not read raw data size\n");
             return -1;
         }
 
         pkt->data = malloc(pkt->data_size);
         if(abs_read(fd, (char *)pkt->data, pkt->data_size, MCS_READ_TIMEOUT_US)
                                                 < (int)pkt->data_size) {
-            printf_dbg("Could not read\n");
+            printf_dbg("Could not read raw data\n");
             return -1;
         }
     }
@@ -242,13 +242,13 @@ MCSPacket *mcs_read_command(int rfd, int wfd)
 
     if(abs_read(rfd, (char *)&pkt->id, sizeof(pkt->id), MCS_READ_TIMEOUT_US)
                                                     < (int)sizeof(pkt->id)) {
-        printf_dbg("Could not read\n");
+        printf_dbg("Could not read packet ID\n");
         goto error_no_notify;
     }
 
     if(abs_read(rfd, (char *)&pkt->type, sizeof(char), MCS_READ_TIMEOUT_US)
                                                     < (int)sizeof(char)) {
-        printf_dbg("Could not read\n");
+        printf_dbg("Could not read packet type\n");
         goto error;
     }
 
@@ -258,7 +258,7 @@ MCSPacket *mcs_read_command(int rfd, int wfd)
         case MCS_TYPE_PAYLOAD:
             if(abs_read(rfd, (char *)&pkt->cmd, sizeof(pkt->cmd),
                                 MCS_READ_TIMEOUT_US) < (int)sizeof(pkt->cmd)) {
-                printf_dbg("Could not read\n");
+                printf_dbg("Could not read command\n");
                 goto error;
             }
 
@@ -272,7 +272,7 @@ MCSPacket *mcs_read_command(int rfd, int wfd)
             pkt->data = malloc(pkt->data_size);
             if(abs_read(rfd, (char *)pkt->data, pkt->data_size,
                                 MCS_READ_TIMEOUT_US) < pkt->data_size) {
-                printf_dbg("Could not read\n");
+                printf_dbg("Could not read error code\n");
                 goto error;
             }
             break;
@@ -280,14 +280,14 @@ MCSPacket *mcs_read_command(int rfd, int wfd)
         case MCS_TYPE_OK_DATA:
             if(abs_read(rfd, (char *)&pkt->data_size, sizeof(pkt->data_size),
                         MCS_READ_TIMEOUT_US) < (int)sizeof(pkt->data_size)) {
-                printf_dbg("Could not read\n");
+                printf_dbg("Could not read raw data size\n");
                 goto error;
             }
 
             pkt->data = malloc(pkt->data_size);
             if(abs_read(rfd, (char *)pkt->data, pkt->data_size,
                                 MCS_READ_TIMEOUT_US) < pkt->data_size) {
-                printf_dbg("Could not read\n");
+                printf_dbg("Could not read raw data\n");
                 goto error;
             }
             break;
@@ -420,12 +420,12 @@ int mcs_write_command_and_free(MCSPacket *pkt, int fd)
     return ret;
 }
 
-MCSPacket *mcs_ok_packet_data(const MCSPacket *from, void *data, size_t size)
+MCSPacket *mcs_ok_packet_data_id(unsigned int id, void *data, size_t size)
 {
     MCSPacket *pkt;
 
     pkt = abs_malloc0(sizeof(*pkt));
-    pkt->id = from->id;
+    pkt->id = id;
     pkt->type = MCS_TYPE_OK_DATA;
     pkt->data_size = size;
     if(size != 0) {
@@ -435,18 +435,18 @@ MCSPacket *mcs_ok_packet_data(const MCSPacket *from, void *data, size_t size)
     return pkt;
 }
 
-MCSPacket *mcs_ok_packet(const MCSPacket *from)
+MCSPacket *mcs_ok_packet_id(unsigned int id)
 {
     MCSPacket *pkt;
 
     pkt = abs_malloc0(sizeof(*pkt));
-    pkt->id = from->id;
+    pkt->id = id;
     pkt->type = MCS_TYPE_OK;
 
     return pkt;
 }
 
-MCSPacket *mcs_err_packet(const MCSPacket *from, int err_code)
+MCSPacket *mcs_err_packet_id(unsigned int id, int err_code)
 {
     MCSPacket *pkt;
     int *err_code_mem;
@@ -455,7 +455,7 @@ MCSPacket *mcs_err_packet(const MCSPacket *from, int err_code)
     *err_code_mem = err_code;
 
     pkt = abs_malloc0(sizeof(*pkt));
-    pkt->id = from->id;
+    pkt->id = id;
     pkt->type = MCS_TYPE_ERR;
     pkt->data_size = sizeof(int);
     pkt->data = (unsigned char *)err_code_mem;
@@ -469,9 +469,15 @@ MCSPacket *mcs_create_packet(MCSCommand cmd, unsigned short nargs,
     MCSPacket *pkt;
 
     pkt = abs_malloc0(sizeof(*pkt));
-    pkt->id = generate_id();
     pkt->type = (cmd & 0xF0000) >> 16;
     pkt->cmd = cmd & 0xFFFF;
+
+    if (pkt->type == MCS_TYPE_PAYLOAD) {
+        pkt->id = (unsigned char)(generate_id()) & 0x7F;
+    } else {
+        pkt->id = generate_id();
+    }
+
     pkt->nargs = nargs;
     if(nargs != 0) {
         pkt->args = abs_malloccpy(args, nargs);

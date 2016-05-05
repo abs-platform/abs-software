@@ -27,6 +27,45 @@
 		}
 	},
 	{
+	"name" : "sdb_qos_start",
+	"description" : "Start logging QOS stats for the current module",
+	"nargs" : 0,
+	"raw_data" : false,
+	"type" : "message",
+	"config" : {
+		"destination" : null,
+		"origin_groups" : ["any"],
+		"destination_groups" : [],
+		"response_size" : 0
+		}
+	},
+	{
+	"name" : "sdb_qos_dump",
+	"description" : "Dump QOS stats for the current module",
+	"nargs" : 0,
+	"raw_data" : false,
+	"type" : "message",
+	"config" : {
+		"destination" : null,
+		"origin_groups" : ["any"],
+		"destination_groups" : [],
+		"response_size" : -1
+		}
+	},
+	{
+	"name" : "sdb_qos_stop",
+	"description" : "Stop logging QOS stats for the current module and dump",
+	"nargs" : 0,
+	"raw_data" : false,
+	"type" : "message",
+	"config" : {
+		"destination" : null,
+		"origin_groups" : ["any"],
+		"destination_groups" : [],
+		"response_size" : -1
+		}
+	},
+	{
 	"name" : "procman_start",
 	"description" : "Start the Process Manager",
 	"nargs" : 0,

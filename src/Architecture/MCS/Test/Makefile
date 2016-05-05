@@ -12,15 +12,15 @@ test: $(TEST)
 	for test in $(TEST); do ./$$test; done;
 
 clean:
-	rm -rf $(OBJS) $(DEPS)
+	rm -rf $(OBJS) $(DEPS) $(TEST)
 
 $(TEST): $(OBJS)
-	$(GUEST_CC) $^ -o $@ $(LIB_FLAG) $(LOCAL_LDFLAGS)
+	$(ANDROID_CC) $^ -o $@ $(ANDROID_LDFLAGS) $(LOCAL_LDFLAGS)
 
 -include $(DEPS)
 
 %.o: %.c
-	$(GUEST_CC) -M -MF $*.d $< $(INCLUDE_FLAG) $(CFLAGS) $(LOCAL_CFLAGS)
-	$(GUEST_CC) -c $< -o $@ $(INCLUDE_FLAG) $(CFLAGS) $(LOCAL_CFLAGS)
+	$(ANDROID_CC) -M -MF $*.d $< $(ANDROID_CFLAGS) $(LOCAL_CFLAGS)
+	$(ANDROID_CC) -c $< -o $@ $(ANDROID_CFLAGS) $(LOCAL_CFLAGS)
 
 .PHONY: all clean test

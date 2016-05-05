@@ -3,23 +3,38 @@
 
 #include <stdbool.h>
 #include <pthread.h>
-#include <sdb.h>
+#include <sdb_group.h>
 #include <mcs.h>
 
 #define SDB_MODULE_DATA_SIZE    1024
+/* TODO: check the USB limit, and join with the module limit */
+#define SDB_USB_DATA_SIZE       256
 
 #define SDB_MODULE_MAX          20
 #define SDB_USB_ID              (SDB_MODULE_MAX + 1)
+#define SDB_USB_DEVICE          "/dev/usb_accessory"
 
-typedef struct SDBModulePacket {
-    unsigned int id_origin;
+#define SDB_QOS_ACTIVE          1
+#define SDB_QOS_DEFAULT_ON      1
+
+typedef struct SDBPacket {
+    unsigned int id_process;
+    int priority;
     MCSPacket *pkt;
-} SDBModulePacket;
+} SDBPacket;
 
-typedef struct SDBModuleQueue {
-    SDBModulePacket *pkt;
-    struct SDBModuleQueue *next;
-} SDBModuleQueue;
+typedef struct SDBQueueElem {
+    SDBPacket *pkt;
+    struct SDBQueueElem *prev;
+    struct SDBQueueElem *next;
+} SDBQueueElem;
+
+typedef struct SDBQueue {
+    SDBQueueElem *queue_first;
+    SDBQueueElem *queue_last;
+    pthread_mutex_t queue_lock;
+    pthread_cond_t queue_var;
+} SDBQueue;
 
 typedef struct SDBModule {
     unsigned int id;
@@ -37,18 +52,26 @@ typedef struct SDBModule {
 
     bool data_socket;
 
-    SDBModuleQueue *queue_first;
-    SDBModuleQueue *queue_last;
+    SDBQueue queue;
+    bool qos_enabled;
 } SDBModule;
+
+typedef enum SDBUSBResponse {
+    SDB_USB_OK,
+    SDB_USB_OK_DATA,
+    SDB_USB_ERROR
+} SDBUSBResponse;
 
 extern SDBModule sdb_module[SDB_MODULE_MAX];
 extern unsigned int sdb_module_last;
 extern pthread_mutex_t sdb_module_lock;
 extern pthread_key_t sdb_module_info;
 extern int sdb_observer_fd;
+extern SDBQueue sdb_usb_queue_send;
 
 /* SDB module section */
 void sdb_module_init(int rfd, int wfd);
+SDBModule *get_info(void);
 int sdb_module_write_mcs_packet(const MCSPacket *pkt, unsigned int to);
 MCSPacket *sdb_module_read_mcs_packet(void);
 void sdb_module_cancel_all(void);
@@ -60,4 +83,28 @@ void *sdb_director_thread();
 /* SDB observer section */
 void *sdb_observer_thread();
 void sdb_observer_wake_up(void);
+
+/* SDB USB section */
+int sdb_usb_init(void);
+
+/* SDB queue section */
+SDBPacket *sdb_packet(MCSPacket *pkt, unsigned int id);
+SDBPacket *sdb_packet_prio(MCSPacket *pkt, unsigned int id);
+void sdb_packet_free(SDBPacket *sdb_pkt);
+void sdb_queue_push(SDBQueue *queue, SDBPacket *sdb_pkt);
+void sdb_queue_push_nolock(SDBQueue *queue, SDBPacket *sdb_pkt);
+SDBPacket *sdb_queue_get(SDBQueue *queue, MCSPacket *answer);
+SDBPacket *sdb_queue_get_nolock(SDBQueue *queue, MCSPacket *answer);
+SDBPacket *sdb_queue_pop_block(SDBQueue *queue);
+void sdb_queue_init(SDBQueue *queue);
+
+/* SDB QOS section */
+void sdb_qos_init(void);
+void sdb_qos_start(void);
+void sdb_qos_stop(void);
+int sdb_qos_dump_module(const MCSPacket *from, MCSPacket **out);
+void sdb_qos_register_packet_in(const MCSPacket *pkt);
+void sdb_qos_register_packet_out(const MCSPacket *pkt);
+void sdb_qos_register_packet_ready(const MCSPacket *pkt);
+void sdb_qos_register_packet_scrap(const MCSPacket *pkt);
 #endif
