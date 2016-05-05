@@ -35,14 +35,13 @@ char *hdlc_rx(){
                     *(response+1) = data_size;
                     /*CRC OK: end of packet*/
                 }else{
-            
                     /*DISCARDED PACKAGE: Number of packet bits not divisible by 8*/
                 }
            }else{
                 received= 1;
                 *response=1;
                 /*DISCARDED PACKAGE: wrong CRC
-                *We will notify the HWDmods of this reception */
+                 *We will notify the HWDmods of this reception */
             }  
         }else{
             *(response + i) = data;
