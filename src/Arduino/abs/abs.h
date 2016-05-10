@@ -46,7 +46,8 @@ typedef enum {
 typedef enum {
     OK,
     OK_DATA,
-    ERRORS
+    ERRORS,
+    ABORT
 } ParametersControl;
 
 typedef enum {

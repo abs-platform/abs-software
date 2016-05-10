@@ -23,18 +23,21 @@ char *hdlc_rx(){
         control = read_register(FIFOCTRL);
         data = read_register(FIFODATA);
         if(control & bit(0) == bit(0)){
-            return;
+            *response = 2;
+            received=1;
             /*DISCARDED PACKAGE: Abort detected*/
-		}
+        }
         else if(control & bit(1) == bit(1)){   
             if(data & bit(3) == bit(3)){ 
                 if(data & ( bit(2) | bit(1) | bit(0) ) == 0x06){
                     received = 1;
-                    data_size = i-2;
+                    data_size = i-2;/*The last two frames are of CRC, we must delete them.*/
                     *response = 0;
                     *(response+1) = data_size;
                     /*CRC OK: end of packet*/
                 }else{
+                    received=0;
+                    i=2; /*We reset the counter to 2, pointing at the first data position*/
                     /*DISCARDED PACKAGE: Number of packet bits not divisible by 8*/
                 }
            }else{
@@ -44,6 +47,7 @@ char *hdlc_rx(){
                  *We will notify the HWDmods of this reception */
             }  
         }else{
+            received=0;
             *(response + i) = data;
             i++;
             /*DATA FRAME: save it to data buffer*/

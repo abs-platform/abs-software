@@ -10,6 +10,18 @@ USBPacket *usb_ok_packet(int id)
     return packet;
 }
 
+USBPacket *usb_abort_packet(int id)
+{
+    USBPacket *packet = (USBPacket *)malloc(sizeof(*packet));
+    packet->command = CONTROL;
+    packet->parameters = ABORT;
+    packet->cmd_arg1 = 0;
+    packet->cmd_arg2 = 0;
+    packet->data_size = 0;
+    packet->packet_id = id;
+    return packet;
+}
+
 USBPacket *usb_ok_data_packet(int id, char *result, int dsize)
 {
     USBPacket *packet = (USBPacket *)malloc(sizeof(*packet));
@@ -229,12 +241,14 @@ USBPacket *execute_packet(USBPacket *packet)
                         if(*received == 1){
                             response = usb_ok_data_packet(packet->packet_id,
                                                         received+2, *(received + 1));
+                        }else if(*received == 2){
+                            response = usb_abort_packet(packet->packet_id);
                         }else{
-                            response = usb_error_packet(FCS_ERROR,1);
+                            response = usb_error_packet(packet->packet_id,FCS_ERROR);
                         }
                         break;
                     case CHANGE_X:
-                        comms.change_x(parameter = packet->cmd_arg1,packet->cmd_arg2);
+                        comms.change_x(packet->cmd_arg1,packet->cmd_arg2);
                         response = usb_ok_packet(packet->packet_id);
                         break;
                 }
