@@ -10,6 +10,8 @@
 #include <avr/wdt.h>
 #include "abs.h"
 
+Comms comms;
+
 Servo myServo[MAX_SERVO];
 SoftwareSerial mySerial[MAX_SERIAL] = {SoftwareSerial(10,11), SoftwareSerial(7,8)};
 
