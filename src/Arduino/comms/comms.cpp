@@ -23,6 +23,8 @@ int bitrate = BITRATE_DEFAULT;
 uint8_t modulationValue = 0xFF;//to distinguish it from value 0
 uint8_t tmgcorrfrac = TMGCORRFRAC_DEFAULT;
 uint8_t cicdec;
+uint32_t fskmul;
+uint32_t datarate;
 
 Comms::Comms()
 {
@@ -50,16 +52,15 @@ void Comms::configure()
     configure_TXRATE(BITRATE_DEFAULT);
     cicdec = configure_CICDEC(BITRATE_DEFAULT);
     configure_MODULATION(MOD_DEFAULT);
-    uint32_t fskmul = compute_FSKMUL(BITRATE_DEFAULT,TMGCORRFRAC_DEFAULT, MOD_DEFAULT, cicdec);
-    uint32_t datarate = configure_DATARATE(BITRATE_DEFAULT);
+    fskmul = compute_FSKMUL(BITRATE_DEFAULT, TMGCORRFRAC_DEFAULT, MOD_DEFAULT, cicdec);
+    datarate = configure_DATARATE(BITRATE_DEFAULT, cicdec, fskmul);
     //we need the values of fskmul and datarate for TMGGAIN config
-    configure_TMGGAIN(fskmul,datarate,TMGCORRFRAC_DEFAULT);
-    configure_AGCATTACK(BITRATE_DEFAULT);
-    configure_AGCDECAY(BITRATE_DEFAULT);
-    configure_PHASEGAIN();
-    configure_FREQGAIN();
+    configure_TMGGAIN(fskmul, datarate, TMGCORRFRAC_DEFAULT);
+    configure_AGCATTACK(BITRATE_DEFAULT, MOD_DEFAULT);
+    configure_AGCDECAY(BITRATE_DEFAULT, MOD_DEFAULT);
+    configure_PHASEGAIN(MOD_DEFAULT);
+    configure_FREQGAIN(MOD_DEFAULT);
     configure_FREQGAIN2();
-    configure_AMPLGAIN();
     configure_AMPLGAIN();
 
     /*LACKS ENCODING PROGRAMMING*/
@@ -68,20 +69,20 @@ void Comms::configure()
     byte frmmode = 010; /*HDLC*/
     frmmode = frmmode  << 1;
     byte crcmode = 001; /*CRC-16*/
-    crcmode = crcmode <<4;
+    crcmode = crcmode << 4;
     byte framing = crcmode |frmmode | fabort;
     write_register(FRAMING, framing);
 
     write_register(IFMODE, 0x00); /*Frame Mode*/
   
     /*IRQ and DCLK control the switches: '00' OFF, '01' Rx, '10' Tx*/ 
-    byte irq_txenz = 11011111;
-    byte dclkz= 10111111;
+    byte irq_txenz = 0b11011111;
+    byte dclkz= 0b10111111;
     byte pincfg1 = read_register(PINCFG1);
     pincfg1 = pincfg1 & dclkz & irq_txenz; 
     write_register(PINCFG1, pincfg1);
   
-    byte pincfg2 = 01110110;
+    byte pincfg2 = 0b01110110;
     write_register(PINCFG2, pincfg2);
 }
 
@@ -110,7 +111,7 @@ void Comms::tx(uint8_t *data,int data_size)
 char* Comms::rx()
 {  
     write_register(PWRMODE, 0x60);
-    delay (3);
+    delay(3);
     if(frequency == 0){
         configure_FREQ(FCARRIER);
     }else{
@@ -120,22 +121,18 @@ char* Comms::rx()
     /*LACKS ENCODING*/
 
     write_register(PWRMODE, 0x68);
-    delay (0.05);
+    delay(0.05);
     auto_ranging();
     write_register(PWRMODE, 0x69);
-    delay (0.05);
+    delay(0.05);
     char *data = hdlc_rx(); 
     write_register(PWRMODE, 0x00);
     return data;
 }
 
-/*It has to be specified the value of each case when the protocol
-  would be written*/
+/*It has to be specified to the HWmod_comms. Parameters defined in comms.h*/
 void Comms::change_x(int parameter, int value)
 {
-    uint32_t tmgcorrfrac;
-    uint32_t fskmul;
-    uint32_t datarate;
     switch(parameter) {
         case FREQUENCY:
             /*We expect the value to be 1(433) or 0(915)*/
@@ -149,35 +146,47 @@ void Comms::change_x(int parameter, int value)
             configure_TXRATE(value);
             cicdec = configure_CICDEC(value); 
             if(modulationValue == 0xFF){
-                fskmul = compute_FSKMUL(value,tmgcorrfrac, MOD_DEFAULT, cicdec);
+                fskmul = compute_FSKMUL(value, tmgcorrfrac, MOD_DEFAULT, cicdec);
             } else {
-                fskmul = compute_FSKMUL(value,tmgcorrfrac, modulationValue, cicdec);
+                fskmul = compute_FSKMUL(value, tmgcorrfrac, modulationValue, cicdec);
             }
-            datarate = configure_DATARATE(value);
+            datarate = configure_DATARATE(value, cicdec, fskmul);
             configure_TMGGAIN(fskmul, datarate, tmgcorrfrac);
             configure_AGCATTACK(value); 
             configure_AGCDECAY(value); 
-            bitrate=value;
+            bitrate = value;
             break;
   
         case MODULATION_TYPE:
             configure_MODULATION(value);
-            fskmul = compute_FSKMUL(bitrate,tmgcorrfrac, value, cicdec);
-            datarate = configure_DATARATE(bitrate);
+            fskmul = compute_FSKMUL(bitrate, tmgcorrfrac, value, cicdec);
+            datarate = configure_DATARATE(bitrate, cicdec, fskmul);
             configure_TMGGAIN(fskmul, datarate, tmgcorrfrac);
+            configure_AGCATTACK(bitrate, value);
+            configure_AGCDECAY(bitrate, value);
+            configure_PHASEGAIN(value);
+            configure_FREQGAIN(value);
+            modulationValue = value;
             break;
             
         case TMRECOV:
             uint8_t modulation;
-            if(modulationValue==0xFF){
+            if(modulationValue == 0xFF){
                 modulation = MOD_DEFAULT;
             }else{
-                modulation=modulationValue;
+                modulation = modulationValue;
             } 
-            fskmul = compute_FSKMUL(bitrate,value, modulation, cicdec);
-            datarate = configure_DATARATE(bitrate);
+            fskmul = compute_FSKMUL(bitrate, value, modulation, cicdec);
+            datarate = configure_DATARATE(bitrate, cicdec, fskmul);
             configure_TMGGAIN(fskmul, datarate, value);
+            configure_AGCATTACK(bitrate, modulation);
+            configure_AGCDECAY(bitrate, modulation);
+            configure_PHASEGAIN(modulation);
+            configure_FREQGAIN(modulation);
+            tmgcorrfrac = value;
             break;
+        default:
+            /*Parameter not changeable*/
     }
 }
 
@@ -209,7 +218,7 @@ void Comms::write_register(byte this_register, byte this_value)
 /*Auto range needed after initialize or setting chip in SYNTHRX or SYNTHTX*/
 void Comms::auto_ranging()
 {
-    write_register(PLLRANGING,0x08);
+    write_register(PLLRANGING, 0x08);
 }
 
 /*------------------CONFIGURATION FUNCTIONS---------------------*/
@@ -227,7 +236,7 @@ void Comms::configure_PLLLOOP(int band)
 void Comms::configure_FREQ(int fcarrier)
 {
     uint8_t freq0;
-    uint32_t freq = fcarrier/FXTAL*2^24 + 1/2;
+    uint32_t freq = (fcarrier / FXTAL) * pow(2,24) + 1 / 2;
     freq0 = freq >> 24;
     write_register(FREQ3, freq0);
     freq0 = freq >> 16;
@@ -248,7 +257,7 @@ void Comms::configure_TXPWR()
 void Comms::configure_IFFREQ()
 {
     uint8_t iffreq0;
-    uint32_t iffreq = FIF/FXTAL*2^17 + 1/2;
+    uint32_t iffreq = (FIF / FXTAL) * pow(2,17) + 1 / 2;
     iffreq0 = iffreq >> 8;
     write_register(IFFREQHI, iffreq0);
     iffreq0 = iffreq;
@@ -259,9 +268,9 @@ void Comms::configure_IFFREQ()
 *FSKDEV0*/
 void Comms::configure_FSKDEV(int bitrate)
 {
-    int fdev=H/2*bitrate;
+    int fdev = H / 2 * bitrate;
     uint8_t fsk0;
-    uint32_t fsk = fdev/FXTAL*2^24 + 1/2;
+    uint32_t fsk = (fdev / FXTAL) * pow(2,24) + 1 / 2;
     fsk0 = fsk >> 16;
     write_register(FSKDEV2, fsk0);
     fsk0 = fsk >> 8;
@@ -275,7 +284,7 @@ void Comms::configure_FSKDEV(int bitrate)
 void Comms::configure_TXRATE(int bitrate)
 {
     uint8_t txr0;
-    uint32_t txr = bitrate/FXTAL*2^24 + 1/2;
+    uint32_t txr = (bitrate / FXTAL) * pow(2,24) + 1/2;
     txr0 = txr >> 16;
     write_register(TXRATEHI, txr0);
     txr0 = txr >> 8;
@@ -288,7 +297,7 @@ void Comms::configure_TXRATE(int bitrate)
 uint32_t Comms::configure_CICDEC(int bitrate)
 {
     uint8_t cicdec0;
-    uint32_t cicdec = 1.5*FXTAL/(8*1.2*(1+H)*bitrate);
+    uint32_t cicdec = 1.5 * (FXTAL / (8 * 1.2 *(1 + H) * bitrate));
     cicdec0 = cicdec >> 8;
     write_register(CICDECHI, cicdec0);
     cicdec0 = cicdec;
@@ -306,23 +315,22 @@ void Comms::configure_MODULATION(int modulation)
 /*This function configures register FSKMUL*/
 uint32_t Comms::compute_FSKMUL(int bitrate, uint8_t tmgcorrfrac, uint8_t modValue, uint32_t cicdec)
 {
-    unsigned int fskmul;
     if(getModulationReg(modValue) < 8){
         fskmul = 1;
     }else{
-        unsigned int comprovacion = FXTAL/(4*bitrate*cicdec);
+        unsigned int comprovacion = FXTAL / (4 * bitrate * cicdec);
         if(tmgcorrfrac >= comprovacion){
-            fskmul = 1/(4*bitrate*cicdec/FXTAL+1/tmgcorrfrac);
+            fskmul = 1 / (4 * bitrate * (cicdec / FXTAL) + (1 / tmgcorrfrac));
         }
     }
     return fskmul;
 }
 
 /*This function configures register DATARATE*/
-uint32_t Comms::configure_DATARATE(int bitrate)
+uint32_t Comms::configure_DATARATE(int bitrate, int cicdec, int fskmul)
 {
     uint8_t datarate0;
-    uint32_t datarate = 2^10*FXTAL/(2*169*bitrate)+1/2;
+    datarate = pow(2,10) * (FXTAL / (cicdec * fskmul * bitrate)) + 1 / 2;
     datarate0 = datarate >> 8;
     write_register(DATARATEHI, datarate0);
     datarate0 = datarate;
@@ -334,7 +342,7 @@ uint32_t Comms::configure_DATARATE(int bitrate)
 void Comms::configure_TMGGAIN(uint32_t fskmul,uint32_t datarate,int tmgcorrfrac)
 {
     uint8_t tmggain0;
-    uint32_t tmggain = fskmul*datarate/tmgcorrfrac + 1/2;
+    uint32_t tmggain = fskmul * (datarate/tmgcorrfrac) + 1/2;
     tmggain0 = tmggain >> 8;
     write_register(TMGGAINHI, tmggain0);
     tmggain0 = tmggain;
@@ -342,35 +350,33 @@ void Comms::configure_TMGGAIN(uint32_t fskmul,uint32_t datarate,int tmgcorrfrac)
 }
 
 /*This function configures registers AGCATTACK*/
-void Comms::configure_AGCATTACK(int bitrate)
+void Comms::configure_AGCATTACK(int bitrate, uint8_t modValue)
 {
-    uint32_t modValue = read_register(MODULATION);
-    uint32_t agcattack;
+    uint8_t agcattack;
     if(modValue == 0){
-        agcattack = 27 + log(bitrate/(10*FXTAL))/log(2);
+        /*log2(x) = log(x)/log(2)*/
+        agcattack = 27 + log(bitrate / (10 * FXTAL)) / log(2);
     }else{
-        agcattack = 27 + log(bitrate/FXTAL)/log(2);
+        agcattack = 27 + log(bitrate / FXTAL) / log(2);
     }
     write_register(AGCATTACK, agcattack);
 }
 
 /*This function configures registers AGCDECAY*/
-void Comms::configure_AGCDECAY(int bitrate)
+void Comms::configure_AGCDECAY(int bitrate, uint8_t modValue )
 {
-    uint32_t modValue = read_register(MODULATION);
-    uint32_t agcdecay;
+    uint8_t agcdecay;
     if(modValue == 0){
-        agcdecay = 27 + log(bitrate/(100*FXTAL))/log(2);
+        agcdecay = 27 + log(bitrate / (100 * FXTAL)) / log(2);
     }else{
-        agcdecay = 27 + log(bitrate/(10*FXTAL))/log(2);
+        agcdecay = 27 + log(bitrate / (10 * FXTAL)) / log(2);
     }
     write_register(AGCDECAY, agcdecay);
 }
 
 /*This function configures registers PHASEGAIN*/
-void Comms::configure_PHASEGAIN()
+void Comms::configure_PHASEGAIN(uint8_t modValue)
 {
-    uint32_t modValue = read_register(MODULATION);
     if(modValue == 0){
         write_register(PHASEGAIN, 0x00);
     }else{
@@ -379,9 +385,8 @@ void Comms::configure_PHASEGAIN()
 }
 
 /*This function configures registers FREQGAIN*/
-void Comms::configure_FREQGAIN()
+void Comms::configure_FREQGAIN(uint8_t modValue)
 {
-    uint32_t modValue = read_register(MODULATION);
     if(modValue < 7){
         write_register(FREQGAIN, 0x06);
     }else{

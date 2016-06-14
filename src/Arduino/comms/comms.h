@@ -14,7 +14,7 @@ class Comms
         Comms();/*Constructor not used*/
         ~Comms();/*Destructor not used*/
         void configure();
-        void tx(uint8_t *data,int data_size);
+        void tx(uint8_t *data, int data_size);
         char *rx();
         void change_x(int parameter, int value);
         unsigned int read_register(byte this_register);
@@ -31,7 +31,7 @@ class Comms
         void configure_MODULATION(int modulation);
         uint32_t compute_FSKMUL(int bitrate, uint8_t tmgcorrfrac, uint8_t modValue, uint32_t cicdec);
         uint32_t configure_DATARATE(int bitrate);
-        void configure_TMGGAIN(uint32_t fskmul,uint32_t datarate,int tmgcorrfrac);
+        void configure_TMGGAIN(uint32_t fskmul, uint32_t datarate, int tmgcorrfrac);
         void configure_AGCATTACK(int bitrate);
         void configure_AGCDECAY(int bitrate);
         void configure_PHASEGAIN();
@@ -106,7 +106,6 @@ class Comms
 #define REF                0x7C
 #define RXMISC             0x7D
 
-
 /*Parameters declaration*/
 
 #define BITRATE_DEFAULT       100000
@@ -117,8 +116,6 @@ class Comms
 #define TMGCORRFRAC_DEFAULT   32
 #define MOD_DEFAULT           4
 #define BANDSEL               1
-
-
 
 typedef enum {
     FREQUENCY,
