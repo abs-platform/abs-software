@@ -1,5 +1,3 @@
-#include <hdlc.h>
-#include <comms.h>
 #include <adk.h>
 #include <usbhub.h>
 #include <TimerOne.h>
@@ -9,6 +7,8 @@
 #include <Servo.h>
 #include <avr/wdt.h>
 #include "comms_test.h"
+#include <hdlc.h>
+#include <comms.h>
 
 Comms comms;
 
@@ -20,9 +20,9 @@ USB Usb;
 Event event_list[MAX_EVENTS];
 int timer = 0, eventCount = 0, packetCount = 0;
 char str[80];
-    int config_done, config_time;
-    int changex_done, changex_time;
-    int transmit_done, transmit_time;
+int config_done, config_time;
+int changex_done, changex_time;
+int transmit_done, transmit_time;
 
 ADK adk(&Usb, "UPC, BarcelonaTech",
               "Android Beyond the Stratoshpere",
@@ -42,21 +42,12 @@ void setup(void)
     Serial.begin(SERIAL_BITRATE);
     Serial.println("\r\nArduino firmware start");
 
-    /*if(Usb.Init() == -1) {
-        Serial.println("OSCOKIRQ failed to assert");
-        while(Usb.Init() == -1); /* retry */
-    //}
-
     Timer1.initialize(TIMER_INTERVAL);
     Timer1.pwm(9, 512);
     Timer1.attachInterrupt(events_routine);
 
     pinMode(SD_CS, OUTPUT);
-
-    /*if (!SD.begin(SD_CS)) {
-        Serial.println("Error initializing SDcard");
-    }
-*/
+    
     Serial.println("Setup Ok\n");
 }
 
@@ -64,12 +55,11 @@ void loop(void)
 {
     USBPacket *packet;
     USBPacket *pkt_res;
-    uint8_t *response;
-    uint8_t msg[MAX_PACKET_SIZE];
-    int i = 0;
     char str[80];
     uint8_t ret;
     uint16_t len;
+
+    packet = (USBPacket *)malloc(sizeof(*packet));
 
     packet->packet_id = 1;
     packet->command = COMMS;
@@ -80,6 +70,7 @@ void loop(void)
                 packet->cmd_arg2, packet->data_size);
     Serial.println(str);
 
+    pkt_res = (USBPacket *)malloc(sizeof(*pkt_res));
     pkt_res = execute_packet(packet);
     free(packet);
 
@@ -88,7 +79,6 @@ void loop(void)
                 pkt_res->cmd_arg2, pkt_res->data_size);
     Serial.println(str);
 
-    //response = to_raw(pkt_res, &len);
     free(pkt_res);
     config_done = 1;
 
@@ -112,32 +102,33 @@ void loop(void)
                 pkt_res->cmd_arg2, pkt_res->data_size);
     Serial.println(str);
 
-    //response = to_raw(pkt_res, &len);
     free(pkt_res);
     changex_done = 1;
 }
 
 void events_routine(void)
 {
-    if(config_done){
-      config_time = timer*TIMER_INTERVAL/1000; //TIMER_INTERVAL in us
-      config_done = 0;
-      sprintf(str,"The execution time of configuration was %d ms", config_time);
-      Serial.println(str);
-      timer = 0;
-    }else if(changex_done){
-      changex_time = timer*TIMER_INTERVAL/1000;
-      changex_done = 0;
-      sprintf(str,"The execution time of change_X was %d ms", changex_time);
-      Serial.println(str);
-      timer = 0;
-    }else if(transmit_done){
-      transmit_time = timer*TIMER_INTERVAL/1000;
-      transmit_done = 0;
-      sprintf(str,"The execution time of transmit was %d ms", transmit_time);
-      Serial.println(str);
+    /*TIMER_INTERVAL has us units*/
+    if(config_done) {
+          config_time = timer * TIMER_INTERVAL / 1000;
+          config_done = 0;
+          sprintf(str, "The execution time of configuration was %d ms", config_time);
+          Serial.println(str);
+          timer = 0;
       
-      timer = 0;
+    } else if(changex_done) {
+          changex_time = timer * TIMER_INTERVAL / 1000;
+          changex_done = 0;
+          sprintf(str, "The execution time of change_X was %d ms", changex_time);
+          Serial.println(str);
+          timer = 0;
+      
+    } else if(transmit_done) {
+          transmit_time = timer * TIMER_INTERVAL / 1000;
+          transmit_done = 0;
+          sprintf(str,"The execution time of transmit was %d ms", transmit_time);
+          Serial.println(str);
+          timer = 0;
     }
     timer++;
 }
