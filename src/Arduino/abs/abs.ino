@@ -5,10 +5,12 @@
 #include <SD.h>
 #include <SPI.h>
 #include <Servo.h>
-#include <comms.h>
-#include <hdlc.h>
 #include <avr/wdt.h>
 #include "abs.h"
+#include <comms.h>
+#include <hdlc.h>
+
+Comms comms;
 
 Servo myServo[MAX_SERVO];
 SoftwareSerial mySerial[MAX_SERIAL] = {SoftwareSerial(10,11), SoftwareSerial(7,8)};

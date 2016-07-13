@@ -1,5 +1,5 @@
-#ifndef __ABS_H
-#define __ABS_H
+#ifndef __COMMS_TEST_H
+#define __COMMS_TEST_H
 
 #include "Arduino.h"
 
@@ -13,7 +13,7 @@
 #define MAX_PACKET_SIZE 2 * 1024
 #define SD_CS 52
 #define COMMS_CS 49
-#define TIMER_INTERVAL 500000
+#define TIMER_INTERVAL 50 //50us
 #define SERIAL_BITRATE 115200
 const long bitrate[] = {300, 1200, 2400, 4800, 9600, 14400,
                         19200, 28800, 38400, 57600,  115200};

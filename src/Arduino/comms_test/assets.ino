@@ -126,7 +126,6 @@ USBPacket *process_packet(uint8_t *msg)
 USBPacket *execute_packet(USBPacket *packet)
 {
     USBPacket *response;
-    char *received;
     char data;
     char *data_arr;
     int pin, num, value, j;
@@ -237,18 +236,19 @@ USBPacket *execute_packet(USBPacket *packet)
                         response = usb_ok_packet(packet->packet_id);
                         break;
                     case RECEIVE:
-                        received = comms.rx();
-                        if(*received == 1) {
+                        char *received;
+                        received=comms.rx();
+                        if(*received == 1){
                             response = usb_ok_data_packet(packet->packet_id,
-                                                        received + 2, *(received + 1));
-                        } else if(*received == 2) {
+                                                        received+2, *(received + 1));
+                        }else if(*received == 2){
                             response = usb_abort_packet(packet->packet_id);
-                        } else {
-                            response = usb_error_packet(packet->packet_id, FCS_ERROR);
+                        }else{
+                            response = usb_error_packet(packet->packet_id,FCS_ERROR);
                         }
                         break;
                     case CHANGE_X:
-                        comms.change_x(packet->cmd_arg1, packet->cmd_arg2);
+                        comms.change_x(packet->cmd_arg1,packet->cmd_arg2);
                         response = usb_ok_packet(packet->packet_id);
                         break;
                 }
